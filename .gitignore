@@ -1,0 +1,50 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# -----------------------------
+# VS Code
+# -----------------------------
+.vscode/
+
+# -----------------------------
+# Airflow
+# -----------------------------
+logs/
+airflow.db
+airflow.cfg
+standalone_admin_password.txt
+
+# -----------------------------
+# Output Files
+# -----------------------------
+output/raw/*
+output/processed/*
+
+# Keep the folders
+!output/raw/.gitkeep
+!output/processed/.gitkeep
+
+# -----------------------------
+# Environment Variables
+# -----------------------------
+.env
+
+# -----------------------------
+# OS Files
+# -----------------------------
+.DS_Store
+Thumbs.db
