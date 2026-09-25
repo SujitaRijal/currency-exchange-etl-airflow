@@ -8,6 +8,14 @@ from include.utils.file_utils import write_json
 from include.transform.transform_rates import transform_exchange_rates
 from include.load.loader import load_exchange_rates
 from include.validate.validator import validate_exchange_rates
+from include.load.metadata import get_last_processed_timestamp
+from include.load.metadata import update_last_processed_timestamp
+from include.load.metadata import create_metadata_table
+import json
+import logging
+
+logger=logging.getLogger(__name__)
+PIPELINE_NAME = "currency_etl"
 
 default_args = {
     "owner": "Sujita Rijal",
@@ -15,6 +23,7 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 
 }
+
 
 @dag (
     dag_id="CurrencyETLPipeline",
@@ -37,10 +46,33 @@ def currency_pipeline():
         write_json(data,file_path) #dag doesnt know how files are written ,it delegates the responsibility
         return file_path  #why returing filepath instead of data,imagine api returns 10 mb of json,passing entire obj through xcom is inefficient,instead we pass the path,and task simply read the file
 
+    
+    @task.short_circuit   
+    def check_metadata(raw_file):
+        create_metadata_table()
+        logger.info("Checking metadata for incremental loading.")
+        
+        with open(raw_file,"r") as f:
+            data= json.load(f)
+
+        api_timestamp= data["time_last_update_utc"]
+
+        last_processed_timestamp=get_last_processed_timestamp(PIPELINE_NAME)
+
+        logger.info(f"API timestamp: {api_timestamp}")
+        logger.info(f"Last processed timestamp: {last_processed_timestamp}")
+
+        if api_timestamp == last_processed_timestamp:
+            logger.info("No new data found, skipping downstream tasks")
+            return False
+        
+        logger.info("New data found. Continuing pipeline")
+        return True
+       
     @task
     def validate(raw_file):
         validate_exchange_rates(raw_file)
-        print("Validation succesfull")
+        logger.info("Validation successful")
 
     
     @task
@@ -54,15 +86,29 @@ def currency_pipeline():
     def load_data(processed_file):
         load_exchange_rates(processed_file)
 
+    @task
+    def update_metadata(raw_file):
+        logger.info("Updating ETL metadata.")
+
+        with open(raw_file,"r") as f:
+            data=json.load(f)
+
+        api_timestamp= data["time_last_update_utc"]
+
+        update_last_processed_timestamp(PIPELINE_NAME,api_timestamp)
+        logger.info(f"Updated metadata for '{PIPELINE_NAME}' with timestamp '{api_timestamp}'.")
+
+
     #task obj
     extract=extract_exchange_rate() #add this tag to dag
+    metadata = check_metadata(extract)
     validation=validate(extract)
     transform=transform_data(extract)
     load=load_data(transform)
-    
+    update=update_metadata(extract)
 
     #set dependencies
-    start >> extract >>validation >> transform >> load >> end
+    start >> extract >>metadata >>validation >> transform >> load >>update >> end
 
 #build dag
 dag=currency_pipeline()
@@ -75,3 +121,6 @@ dag=currency_pipeline()
 
 #primary key->one for entire table,cannot be null,uniquely identify record
 #unique- there can be many for a table,prevent duplicates,,used to enforce business rules
+
+#"The DAG uses Airflow's @task.short_circuit. When no new source data is detected, the operator intentionally skips all downstream 
+# tasks to avoid unnecessary processing. Since end is downstream, it is also marked as skipped."
