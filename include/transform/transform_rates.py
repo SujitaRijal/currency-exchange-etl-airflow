@@ -45,7 +45,7 @@ def transform_exchange_rates(input_file,output_file,ds):
         }
 
         transformed_data.append(record)
-        valid_records +=1
+        valid_records +=1  
 
     # -----------------------------
     # Transform Summary
@@ -62,6 +62,7 @@ def transform_exchange_rates(input_file,output_file,ds):
 
     if not transformed_data:
         raise ValueError("No valid exchange rates found after transformation.")
+
     output_path = Path(output_file)
     output_path.parent.mkdir(parents=True,exist_ok=True)
 

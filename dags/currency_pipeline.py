@@ -11,11 +11,14 @@ from include.validate.validator import validate_exchange_rates
 from include.load.metadata import get_last_processed_timestamp
 from include.load.metadata import update_last_processed_timestamp
 from include.load.metadata import create_metadata_table
+from include.quality.quality_check import check_data_quality
 import json
 import logging
 
+from airflow.models import Variable
+
 logger=logging.getLogger(__name__)
-PIPELINE_NAME = "currency_etl"
+PIPELINE_NAME = Variable.get("PIPELINE_NAME")
 
 default_args = {
     "owner": "Sujita Rijal",
@@ -81,7 +84,11 @@ def currency_pipeline():
         return transform_exchange_rates(
             raw_file,output_file, ds
         )
-
+    @task
+    def quality(processed_file):
+        check_data_quality(processed_file)
+        logger.info("Data quality check passed.")
+    
     @task
     def load_data(processed_file):
         load_exchange_rates(processed_file)
@@ -104,11 +111,12 @@ def currency_pipeline():
     metadata = check_metadata(extract)
     validation=validate(extract)
     transform=transform_data(extract)
+    quality_check=quality(transform)
     load=load_data(transform)
     update=update_metadata(extract)
 
     #set dependencies
-    start >> extract >>metadata >>validation >> transform >> load >>update >> end
+    start >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> end
 
 #build dag
 dag=currency_pipeline()
