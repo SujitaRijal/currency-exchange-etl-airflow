@@ -20,6 +20,7 @@ from airflow.models import Variable
 
 logger=logging.getLogger(__name__)
 PIPELINE_NAME = Variable.get("PIPELINE_NAME")
+ALERT_EMAIL= Variable.get("ALERT_EMAIL")
 
 default_args = {
     "owner": "Sujita Rijal",
@@ -27,7 +28,7 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 
     "on_failure_callback": send_smtp_notification(
-        to="rijalsujeeta@gmail.com",
+        to = ALERT_EMAIL,
         subject="Airflow Task Failed: {{ti.task_id}}",
         html_content="""
         <h2> Currency ETL Pipeline Failed </h2>
