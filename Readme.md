@@ -202,7 +202,7 @@ CurrencyETLPipeline/
 
 # Screenshots
 ### Airflow DAG Graph – Successful ETL Pipeline Execution
-![Airflow Graph View](image-4.png)
+![Airflow Graph View](image-5.png)
 
 ### Airflow Grid View – Incremental Loading (Downstream Tasks Skipped)
 ![Incremental loading demonstration](image-3.png)
