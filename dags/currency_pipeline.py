@@ -12,6 +12,7 @@ from include.load.metadata import get_last_processed_timestamp
 from include.load.metadata import update_last_processed_timestamp
 from include.load.metadata import create_metadata_table
 from include.quality.quality_check import check_data_quality
+from airflow.providers.smtp.notifications.smtp import send_smtp_notification
 import json
 import logging
 
@@ -24,6 +25,21 @@ default_args = {
     "owner": "Sujita Rijal",
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
+
+    "on_failure_callback": send_smtp_notification(
+        to="rijalsujeeta@gmail.com",
+        subject="Airflow Task Failed: {{ti.task_id}}",
+        html_content="""
+        <h2> Currency ETL Pipeline Failed </h2>
+
+        <p><b>DAG:</b> {{ dag.dag_id }}</p>
+        <p><b>Task:</b> {{ ti.task_id }}</p>
+        <p><b>Execution Date:</b> {{ ds }}</p>
+        <p><b>Exception:</b> {{ exception }}</p>
+
+        <p>Please check the Airflow logs for more details.</p>
+        """,
+    ),
 
 }
 

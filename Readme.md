@@ -7,7 +7,7 @@ This project is an end-to-end ETL (Extract, Transform, Load) pipeline built usin
 
 The project follows a modular ETL architecture by separating the Extract, Validate, Transform, and Load stages into independent modules. It includes data validation, record-level quality checks, structured logging using Python's logging module, and idempotent database loading through PostgreSQL unique constraints and `ON CONFLICT DO NOTHING`.
 
-This project was developed to gain practical experience with Apache Airflow workflow orchestration, REST API integration, data validation, PostgreSQL, Docker, and production-oriented ETL pipeline design. The latest version implements incremental loading using an ETL metadata table and Airflow's @task.short_circuit decorator, allowing the pipeline to skip unnecessary downstream tasks when the source data has not changed.
+This project was developed to gain practical experience with Apache Airflow workflow orchestration, REST API integration, data validation,data quality checks, PostgreSQL, Docker, and production-oriented ETL pipeline design. The latest version implements incremental loading using an ETL metadata table and Airflow's @task.short_circuit decorator, allowing the pipeline to skip unnecessary downstream tasks when the source data has not changed.
 
 
 ## Features
@@ -16,12 +16,14 @@ This project was developed to gain practical experience with Apache Airflow work
 * Stores both raw and processed JSON files for traceability.
 * Validates API responses and performs record-level data quality checks.
 * Transforms nested JSON into a relational format suitable for PostgreSQL.
+* Runs dedicated data quality checks before loading.
 * Loads data efficiently using bulk inserts (executemany).
 * Prevents duplicate records using PostgreSQL unique constraints and ON CONFLICT DO NOTHING (idempotent loading).
 * Implements incremental loading using an ETL metadata table and API timestamp comparison.
 * Automatically skips downstream ETL tasks when no new source data is available using Airflow's TaskFlow Short Circuit.
 * Uses structured logging for monitoring and debugging.
 * Follows a modular ETL architecture with separate Extract, Validate, Transform, Load, and Utility modules.
+* Sends automatic email notifications when ETL tasks fail using Airflow SMTP notifications.
 * Orchestrates the workflow using Apache Airflow's TaskFlow API.
 * Containerized with Docker for a reproducible development environment.
 
@@ -29,39 +31,43 @@ This project was developed to gain practical experience with Apache Airflow work
 ## ETL Pipeline Architecture
 
 ```text
-                  Open Exchange Rates API
-                            │
-                            ▼
-                      Extract Task
-                            │
-                            ▼
-                      Raw JSON File
-                            │
-                            ▼
-                  Check Metadata Task
-                            │
-                      ┌─────┴─────┐
-                      │           │
-                  New Data?     No New Data
-                      │              │
-                    Yes              │
-                      ▼              ▼
-                  Validate       Pipeline Ends
-                      │
-                      ▼
-                  Transform
-                      │
-                      ▼
-                  Processed JSON
-                      │
-                      ▼
-                  Load Task
-                      │
-                      ▼
-                  exchange_rates Table
-                      │
-                      ▼
-                  Update Metadata Table
+                              Open Exchange Rates API
+                                        │
+                                        ▼
+                                    Extract Task
+                                        │
+                                        ▼
+                                    Raw JSON File
+                                        │
+                                        ▼
+                                Check Metadata Task
+                                        │
+                                    ┌───┴─────┐
+                                    │         │
+                                New Data?   No New Data
+                                    │            │
+                                   Yes           ▼
+                                    │       Pipeline Ends
+                                    ▼
+                                Validate Task
+                                    │
+                                    ▼
+                                Transform Task
+                                    │
+                                    ▼
+                            Processed JSON File
+                                    │
+                                    ▼
+                            Data Quality Check
+                                    │
+                                    ▼
+                                Load Task
+                                    │
+                                    ▼
+                           exchange_rates Table
+                                    │
+                                    ▼
+                           Update Metadata Table
 ```
 
 
@@ -105,7 +111,15 @@ The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of
   * Skipped records by reason
 * Saves the cleaned data as a processed JSON file.
 
-### 5. Load
+### 5. Data Quality Check
+
+- Ensures the processed dataset is not empty.
+- Verifies exchange rates are positive values.
+- Detects duplicate currency pairs.
+- Confirms the dataset contains at least 100 currencies.
+- Stops the pipeline immediately if any quality rule fails.
+
+### 6. Load
 
 * Reads the processed JSON file.
 * Creates the `exchange_rates` table automatically if it does not already exist.
@@ -117,7 +131,7 @@ The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of
   * Records inserted
   * Duplicate records skipped
 
-### 6. Update Metadata
+### 7. Update Metadata
 * Reads the API update timestamp from the raw JSON.
 * Updates the etl_metadata table after successful loading.
 * Stores the latest processed timestamp for future incremental loads.
@@ -125,7 +139,6 @@ The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of
 
 ## Folder Structure
 
-```text
 CurrencyETLPipeline/
 │
 ├── dags/
@@ -134,14 +147,21 @@ CurrencyETLPipeline/
 ├── include/
 │   ├── extract/
 │   │   └── api_client.py
+│   │
 │   ├── validate/
 │   │   └── validator.py
+│   │
 │   ├── transform/
 │   │   └── transform_rates.py
+│   │
+│   ├── quality/
+│   │   └── quality_check.py
+│   │
 │   ├── load/
 │   │   ├── database.py
-│   │   └── loader.py
-|   |   └── metadata.py
+│   │   ├── loader.py
+│   │   └── metadata.py
+│   │
 │   └── utils/
 │       └── file_utils.py
 │
@@ -153,7 +173,6 @@ CurrencyETLPipeline/
 ├── Dockerfile
 ├── requirements.txt
 └── README.md
-```
 
 # Screenshots
 ### Airflow DAG Graph – Successful ETL Pipeline Execution
@@ -223,11 +242,10 @@ http://localhost:8080
 6. Verify the loaded data in PostgreSQL.
 
 ## Future Improvements
-
-- Add automated email notifications on DAG failure.
-- Store API configuration using Airflow Variables or Connections.
-- Add data quality checks using dedicated validation tasks.
+- Archive or purge old raw and processed files.
 - Add unit tests for Extract, Validate, Transform, and Load modules.
+- Generate data quality reports and pipeline metrics.
+- Deploy the pipeline to a cloud environment.
 
 
 
