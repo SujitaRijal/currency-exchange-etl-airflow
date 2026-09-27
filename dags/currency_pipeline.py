@@ -141,7 +141,7 @@ def currency_pipeline():
 
     #task obj
     extract=extract_exchange_rate() #add this tag to dag
-    # metadata = check_metadata(extract)
+    metadata = check_metadata(extract)
     validation=validate(extract)
     transform=transform_data(extract)
     quality_check=quality(transform)
@@ -150,7 +150,7 @@ def currency_pipeline():
     purge_files= purge_old_output_files()
 
     #set dependencies
-    start >> extract >> validation >> transform >> quality_check >> load >> update >> purge_files>> end
+    start >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> purge_files>> end
 
 #build dag
 dag=currency_pipeline()
