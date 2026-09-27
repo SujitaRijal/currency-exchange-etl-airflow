@@ -205,7 +205,7 @@ CurrencyETLPipeline/
 ![Airflow Graph View](image-5.png)
 
 ### Airflow Grid View – Incremental Loading (Downstream Tasks Skipped)
-![Incremental loading demonstration](image-3.png)
+![Incremental loading demonstration](image-6.png)
 
 
 ## Technologies Used
