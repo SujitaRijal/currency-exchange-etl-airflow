@@ -24,6 +24,7 @@ This project was developed to gain practical experience with Apache Airflow work
 * Uses structured logging for monitoring and debugging.
 * Follows a modular ETL architecture with separate Extract, Validate, Transform, Load, and Utility modules.
 * Sends automatic email notifications when ETL tasks fail using Airflow SMTP notifications.
+* Archive or purge old raw and processed files.
 * Orchestrates the workflow using Apache Airflow's TaskFlow API.
 * Containerized with Docker for a reproducible development environment.
 
@@ -31,43 +32,62 @@ This project was developed to gain practical experience with Apache Airflow work
 ## ETL Pipeline Architecture
 
 ```text
-                              Open Exchange Rates API
-                                        │
-                                        ▼
-                                    Extract Task
-                                        │
-                                        ▼
-                                    Raw JSON File
-                                        │
-                                        ▼
-                                Check Metadata Task
-                                        │
-                                    ┌───┴─────┐
-                                    │         │
-                                New Data?   No New Data
-                                    │            │
-                                   Yes           ▼
-                                    │       Pipeline Ends
-                                    ▼
-                                Validate Task
-                                    │
-                                    ▼
-                                Transform Task
-                                    │
-                                    ▼
-                            Processed JSON File
-                                    │
-                                    ▼
-                            Data Quality Check
-                                    │
-                                    ▼
-                                Load Task
-                                    │
-                                    ▼
-                           exchange_rates Table
-                                    │
-                                    ▼
-                           Update Metadata Table
+                                    Currency ETL Pipeline
+
+                                    Open Exchange Rates API
+                                            │
+                                            ▼
+                                    Extract Exchange Rates
+                                            │
+                                            ▼
+                                Save Raw JSON (output/raw)
+                                            │
+                                            ▼
+                                Check Metadata (Incremental Load)
+                                            │
+                                ┌───────────┴───────────┐
+                                │                       │
+                            New Data?                No New Data
+                                │                       │
+                               Yes                      ▼
+                                │                 Pipeline Ends
+                                ▼
+                            Validate
+                                │
+                                ▼
+                            Transform
+                                │
+                                ▼
+                        Save Processed JSON
+                        (output/processed)
+                                │
+                                ▼
+                        Data Quality Checks
+                                │
+                                ▼
+                        Load into PostgreSQL
+                                │
+                                ▼
+                        Exchange_rates Table
+                                │
+                                ▼
+                        Update Metadata Table
+                                │
+                                ▼
+                    Purge Old Raw & Processed Files
+                        (Configurable Retention)
+                                │
+                                ▼
+                               End
+
+
+          ▲
+          │
+   Any Task Failure
+          │
+          ▼
+ Automatic Email Notification
+        
 ```
 
 
@@ -136,43 +156,49 @@ The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of
 * Updates the etl_metadata table after successful loading.
 * Stores the latest processed timestamp for future incremental loads.
 
+### 8. Automatic File Retention
+* Automatically removes old files from output/raw & output/processed using Airflow Variable & Airflow Execution Date(ds)
+
 
 ## Folder Structure
 
 CurrencyETLPipeline/
-│
-├── dags/
-│   └── currency_pipeline.py
-│
-├── include/
-│   ├── extract/
-│   │   └── api_client.py
-│   │
-│   ├── validate/
-│   │   └── validator.py
-│   │
-│   ├── transform/
-│   │   └── transform_rates.py
-│   │
-│   ├── quality/
-│   │   └── quality_check.py
-│   │
-│   ├── load/
-│   │   ├── database.py
-│   │   ├── loader.py
-│   │   └── metadata.py
-│   │
-│   └── utils/
-│       └── file_utils.py
-│
-├── output/
-│   ├── raw/
-│   └── processed/
-│
-├── docker-compose.yaml
-├── Dockerfile
-├── requirements.txt
-└── README.md
+
+                │
+                ├── dags/
+                │   └── currency_pipeline.py
+                │
+                ├── include/
+                │   ├── extract/
+                │   │     └── api_client.py
+                │   │
+                │   ├── validate/
+                │   │     └── validator.py
+                │   │
+                │   ├── transform/
+                │   │     └── transform_rates.py
+                │   │
+                │   ├── quality/
+                │   │     └── quality_check.py
+                │   │
+                │   ├── load/
+                │   │     ├── loader.py
+                │   │     ├── database.py
+                │   │     └── metadata.py
+                │   │
+                │   └── utils/
+                │         ├── file_utils.py
+                │         └── purge_utils.py
+                │
+                ├── output/
+                │   ├── raw/
+                │   └── processed/
+                │
+                ├── docker-compose.yaml
+                ├── Dockerfile
+                ├── requirements.txt
+                └── README.md
+                
 
 # Screenshots
 ### Airflow DAG Graph – Successful ETL Pipeline Execution
@@ -242,7 +268,7 @@ http://localhost:8080
 6. Verify the loaded data in PostgreSQL.
 
 ## Future Improvements
-- Archive or purge old raw and processed files.
+
 - Add unit tests for Extract, Validate, Transform, and Load modules.
 - Generate data quality reports and pipeline metrics.
 - Deploy the pipeline to a cloud environment.

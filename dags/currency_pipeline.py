@@ -13,6 +13,7 @@ from include.load.metadata import update_last_processed_timestamp
 from include.load.metadata import create_metadata_table
 from include.quality.quality_check import check_data_quality
 from airflow.providers.smtp.notifications.smtp import send_smtp_notification
+from include.utils.purge_utils import purge_old_files
 import json
 import logging
 
@@ -21,6 +22,7 @@ from airflow.models import Variable
 logger=logging.getLogger(__name__)
 PIPELINE_NAME = Variable.get("PIPELINE_NAME")
 ALERT_EMAIL= Variable.get("ALERT_EMAIL")
+RETENTION_DAYS = int(Variable.get("FILE_RETENTION_DAYS"))
 
 default_args = {
     "owner": "Sujita Rijal",
@@ -122,18 +124,33 @@ def currency_pipeline():
         update_last_processed_timestamp(PIPELINE_NAME,api_timestamp)
         logger.info(f"Updated metadata for '{PIPELINE_NAME}' with timestamp '{api_timestamp}'.")
 
+    @task
+    def purge_old_output_files(ds):
+
+        purge_old_files(
+            directory="/opt/airflow/output/raw",
+            retention_days= RETENTION_DAYS,
+            ds=ds
+        )
+
+        purge_old_files(
+            directory="/opt/airflow/output/processed",
+            retention_days= RETENTION_DAYS,
+            ds=ds
+        )
 
     #task obj
     extract=extract_exchange_rate() #add this tag to dag
-    metadata = check_metadata(extract)
+    # metadata = check_metadata(extract)
     validation=validate(extract)
     transform=transform_data(extract)
     quality_check=quality(transform)
     load=load_data(transform)
     update=update_metadata(extract)
+    purge_files= purge_old_output_files()
 
     #set dependencies
-    start >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> end
+    start >> extract >> validation >> transform >> quality_check >> load >> update >> purge_files>> end
 
 #build dag
 dag=currency_pipeline()

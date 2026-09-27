@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+
 def write_json(data,file_path):
     """ Write python dictionary to json file """
 
