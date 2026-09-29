@@ -1,99 +1,98 @@
 # Currency Exchange Rate ETL Pipeline using Apache Airflow
-A production-inspired ETL pipeline built with Apache Airflow 3, PostgreSQL, and Docker that extracts, validates, transforms, and loads daily currency exchange rates while supporting idempotent and incremental data loading.
+
+A production-inspired ETL pipeline built with **Apache Airflow 3**, **Python**, **PostgreSQL**, and **Docker** that automates the extraction, validation, transformation, and loading of daily currency exchange rates.
+
+The pipeline supports **incremental loading**, **execution auditing**, **automatic email notifications**, and **idempotent database loading**, making it a practical demonstration of production-oriented data engineering concepts.
 
 ## Project Overview
 
-This project is an end-to-end ETL (Extract, Transform, Load) pipeline built using **Apache Airflow**, **Python**, **PostgreSQL**, and **Docker**. The pipeline automatically retrieves daily currency exchange rates from the **Open Exchange Rates API (`open.er-api.com`)**, validates the raw API response, transforms the nested JSON data into a structured format, and loads it into a PostgreSQL database.
+This project is an end-to-end ETL (Extract, Transform, Load) pipeline built using **Apache Airflow 3**, **Python**, **PostgreSQL**, and **Docker**. It automatically retrieves daily currency exchange rates from the **Open Exchange Rates API (`open.er-api.com`)**, validates the API response, transforms the nested JSON data into a structured relational format, performs data quality checks, and loads the processed data into PostgreSQL.
 
-The project follows a modular ETL architecture by separating the Extract, Validate, Transform, and Load stages into independent modules. It includes data validation, record-level quality checks, structured logging using Python's logging module, and idempotent database loading through PostgreSQL unique constraints and `ON CONFLICT DO NOTHING`.
+The pipeline follows a modular architecture by separating the Extract, Validate, Transform, Quality Check, Load, Metadata, Audit, Callback, and Utility components into independent modules, making the workflow easier to maintain and extend. It incorporates production-oriented ETL practices such as **incremental loading** using an ETL metadata table and Airflow's `@task.short_circuit`, **idempotent database loading** using PostgreSQL unique constraints with `ON CONFLICT DO NOTHING`, **execution audit logging** that tracks pipeline status (`RUNNING`, `SUCCESS`, `SKIPPED`, and `FAILED`), **automatic SMTP email notifications** on task failures, and **structured logging** for monitoring and debugging.
 
-This project was developed to gain practical experience with Apache Airflow workflow orchestration, REST API integration, data validation,data quality checks, PostgreSQL, Docker, and production-oriented ETL pipeline design. The latest version implements incremental loading using an ETL metadata table and Airflow's @task.short_circuit decorator, allowing the pipeline to skip unnecessary downstream tasks when the source data has not changed.
+This project was developed to gain practical experience with workflow orchestration, REST API integration, PostgreSQL, Docker, and production-style data engineering concepts.
 
 
 ## Features
 
-* Extracts daily currency exchange rates from the Open Exchange Rates API (open.er-api.com).
-* Stores both raw and processed JSON files for traceability.
-* Validates API responses and performs record-level data quality checks.
-* Transforms nested JSON into a relational format suitable for PostgreSQL.
-* Runs dedicated data quality checks before loading.
-* Loads data efficiently using bulk inserts (executemany).
-* Prevents duplicate records using PostgreSQL unique constraints and ON CONFLICT DO NOTHING (idempotent loading).
-* Implements incremental loading using an ETL metadata table and API timestamp comparison.
-* Automatically skips downstream ETL tasks when no new source data is available using Airflow's TaskFlow Short Circuit.
-* Uses structured logging for monitoring and debugging.
-* Follows a modular ETL architecture with separate Extract, Validate, Transform, Load, and Utility modules.
-* Sends automatic email notifications when ETL tasks fail using Airflow SMTP notifications.
-* Archive or purge old raw and processed files.
-* Orchestrates the workflow using Apache Airflow's TaskFlow API.
-* Containerized with Docker for a reproducible development environment.
+* **Automated ETL Pipeline** – Extracts, validates, transforms, and loads daily currency exchange rates from the Open Exchange Rates API.
+* **Incremental Loading** – Processes only new API data using an ETL metadata table and Airflow's `@task.short_circuit`.
+* **Data Validation & Quality Checks** – Validates API responses, cleans invalid records, and enforces data quality rules before loading.
+* **Idempotent Loading** – Prevents duplicate records using PostgreSQL unique constraints together with `ON CONFLICT DO NOTHING`.
+* **Execution Auditing** – Tracks every pipeline run with audit logs, recording execution status (`RUNNING`, `SUCCESS`, `SKIPPED`, `FAILED`), timestamps, loaded records, and error messages.
+* **Failure Handling & Notifications** – Uses Airflow callbacks to update audit logs and automatically send SMTP email notifications when tasks fail.
+* **File Management** – Stores raw and processed JSON files for traceability and automatically purges old files based on configurable retention settings.
+* **Monitoring & Logging** – Implements structured logging throughout the pipeline for monitoring, debugging, and troubleshooting.
+* **Modular Architecture** – Organizes the project into independent Extract, Validate, Transform, Quality Check, Load, Metadata, Audit, Callback, and Utility modules for maintainability and scalability.
+* **Containerized Deployment** – Runs in a reproducible environment using Docker and Docker Compose.
 
 
 ## ETL Pipeline Architecture
 
 ```text
-                                    Currency ETL Pipeline
+                         Currency Exchange Rate ETL Pipeline
 
-                                    Open Exchange Rates API
-                                            │
-                                            ▼
-                                    Extract Exchange Rates
-                                            │
-                                            ▼
-                                Save Raw JSON (output/raw)
-                                            │
-                                            ▼
-                                Check Metadata (Incremental Load)
-                                            │
-                                ┌───────────┴───────────┐
-                                │                       │
-                            New Data?                No New Data
-                                │                       │
-                               Yes                      ▼
-                                │                 Pipeline Ends
-                                ▼
-                            Validate
-                                │
-                                ▼
-                            Transform
-                                │
-                                ▼
-                        Save Processed JSON
-                        (output/processed)
-                                │
-                                ▼
-                        Data Quality Checks
-                                │
-                                ▼
-                        Load into PostgreSQL
-                                │
-                                ▼
-                        Exchange_rates Table
-                                │
-                                ▼
-                        Update Metadata Table
-                                │
-                                ▼
-                    Purge Old Raw & Processed Files
-                        (Configurable Retention)
-                                │
-                                ▼
-                               End
+                      Open Exchange Rates API (open.er-api.com)
+                                      │
+                                      ▼
+                            Extract Exchange Rates
+                                      │
+                                      ▼
+                         Save Raw JSON (output/raw)
+                                      │
+                                      ▼
+                           Create Audit Log (RUNNING)
+                                      │
+                                      ▼
+                    Check Metadata (Incremental Loading)
+                                      │
+                    ┌─────────────────┴─────────────────┐
+                    │                                   │
+                 New Data                        No New Data
+                    │                                   │
+                    ▼                                   ▼
+                Validate                     Update Audit (SKIPPED)
+                    │                                   │
+                    ▼                                   ▼
+               Transform                        Pipeline Ends
+                    │
+                    ▼
+        Save Processed JSON (output/processed)
+                    │
+                    ▼
+           Data Quality Checks
+                    │
+                    ▼
+          Load into PostgreSQL
+                    │
+                    ▼
+         Update Metadata Table
+                    │
+                    ▼
+        Update Audit log (SUCCESS)
+                    │
+                    ▼
+      Purge Old Raw & Processed Files
+                    │
+                    ▼
+                   End
 
 
-          ▲
-          │
-   Any Task Failure
-          │
-          ▼
- Automatic Email Notification
+              Any Task Failure
+                      │
+                      ▼
+          Pipeline Failure Callback
+               │               │
+               ▼               ▼
+ Update Audit Record      Send Email
+      (FAILED)          Notification
         
 ```
 
 
 ## Workflow
 
-The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of six main stages:
+The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of the following stages:
 
 ### 1. Extract
 
@@ -111,101 +110,94 @@ The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of
  
 ### 3. Validate
 
-* Verifies that all required fields are present (`base_code`, `time_last_update_utc`, and `rates`).
-* Confirms that each field has the expected data type.
-* Ensures that required values are not empty.
+* Verifies that all required fields are present (`base_code`, `time_last_update_utc`, and `rates`) with their expected data types.
 * Stops the pipeline immediately if the dataset fails validation.
 
 ### 4. Transform
 
 * Reads the validated raw JSON file.
-* Converts the nested `rates` dictionary into one record per currency.
-* Performs record-level validation by skipping:
-
-  * `None` exchange rates
-  * Non-numeric exchange rates
-  * Zero or negative exchange rates
-* Generates a transformation summary showing:
-  * Total records
-  * Valid records
-  * Skipped records by reason
+* Performs record-level validation 
 * Saves the cleaned data as a processed JSON file.
 
 ### 5. Data Quality Check
 
-- Ensures the processed dataset is not empty.
-- Verifies exchange rates are positive values.
-- Detects duplicate currency pairs.
-- Confirms the dataset contains at least 100 currencies.
-- Stops the pipeline immediately if any quality rule fails.
+- Verifies predefined quality rules before loading.
+- Stops the pipeline if any quality check fails.
 
 ### 6. Load
-
-* Reads the processed JSON file.
-* Creates the `exchange_rates` table automatically if it does not already exist.
 * Performs bulk insertion into PostgreSQL using `executemany()`.
 * Prevents duplicate records using a unique constraint together with `ON CONFLICT DO NOTHING`.
-* Generates a loading summary showing:
-
-  * Records received
-  * Records inserted
-  * Duplicate records skipped
 
 ### 7. Update Metadata
 * Reads the API update timestamp from the raw JSON.
 * Updates the etl_metadata table after successful loading.
 * Stores the latest processed timestamp for future incremental loads.
 
-### 8. Automatic File Retention
-* Automatically removes old files from output/raw & output/processed using Airflow Variable & Airflow Execution Date(ds)
+### 8. Update Audit log
+* Records pipeline execution details, including status (RUNNING, SUCCESS, SKIPPED, or FAILED), timestamps, loaded records, and error messages.
 
+### 9. Failure Handling
+* Executes Airflow callbacks to update the audit log and send automatic email notifications whenever a task fails.
 
-## Folder Structure
+### 10. Automatic File Retention
+* Automatically removes old files from output/raw & output/processed using Airflow Variable & Airflow Execution Date(ds) based on configured retention period
 
+## Project Structure
+
+```text
 CurrencyETLPipeline/
-
-                │
-                ├── dags/
-                │   └── currency_pipeline.py
-                │
-                ├── include/
-                │   ├── extract/
-                │   │     └── api_client.py
-                │   │
-                │   ├── validate/
-                │   │     └── validator.py
-                │   │
-                │   ├── transform/
-                │   │     └── transform_rates.py
-                │   │
-                │   ├── quality/
-                │   │     └── quality_check.py
-                │   │
-                │   ├── load/
-                │   │     ├── loader.py
-                │   │     ├── database.py
-                │   │     └── metadata.py
-                │   │
-                │   └── utils/
-                │         ├── file_utils.py
-                │         └── purge_utils.py
-                │
-                ├── output/
-                │   ├── raw/
-                │   └── processed/
-                │
-                ├── docker-compose.yaml
-                ├── Dockerfile
-                ├── requirements.txt
-                └── README.md
-                
+│
+├── dags/
+│   └── currency_pipeline.py          # Main Airflow DAG
+│
+├── include/
+│   ├── callbacks/
+│   │   ├── audit_callback.py
+│   │   ├── email_callback.py
+│   │   └── pipeline_callback.py
+│   │
+│   ├── extract/
+│   │   └── api_client.py
+│   │
+│   ├── validate/
+│   │   └── validator.py
+│   │
+│   ├── transform/
+│   │   └── transform_rates.py
+│   │
+│   ├── quality/
+│   │   └── quality_check.py
+│   │
+│   ├── load/
+│   │   ├── database.py
+│   │   ├── loader.py
+│   │   ├── metadata.py
+│   │   └── audit.py
+│   │
+│   └── utils/
+│       ├── file_utils.py
+│       └── purge_utils.py
+│
+├── output/
+│   ├── raw/
+│   └── processed/
+│
+├── logs/
+├── plugins/
+├── config/
+│
+├── docker-compose.yaml
+├── Dockerfile
+├── requirements.txt
+└── README.md
+```
 
 # Screenshots
-### Airflow DAG Graph – Successful ETL Pipeline Execution
-![Airflow Graph View](image-5.png)
+### Airflow DAG Graph – ETL Pipeline Execution
+![Airflow Graph View](image-7.png)
 
-### Airflow Grid View – Incremental Loading (Downstream Tasks Skipped)
-![Incremental loading demonstration](image-6.png)
+### Airflow Grid View – Incremental Loading (Downstream Tasks Skipped) 
+![Incremental loading demonstration](image-8.png)
 
 
 ## Technologies Used
@@ -215,10 +207,11 @@ CurrencyETLPipeline/
 - Docker & Docker Compose
 - REST API (Open Exchange Rates API)
 - JSON
+- SMTP (Email Notifications)
 
 
 ## Database Tables
-The pipeline stores exchange rates in the `exchange_rates` table.
+The pipeline uses the following PostgreSQL tables to store exchange rate data, incremental loading metadata, and pipeline execution audit logs.
 
 ```sql
 CREATE TABLE IF NOT EXISTS exchange_rates(
@@ -239,12 +232,28 @@ CREATE TABLE IF NOT EXISTS etl_metadata(
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
 ```
-## Metadata table description
 
-| Table          | Purpose                                                                      |
-| -------------- | ---------------------------------------------------------------------------- |
-| exchange_rates | Stores transformed exchange rate data                                        |
-| etl_metadata   | Stores the last successfully processed API timestamp for incremental loading |
+```sql
+CREATE TABLE IF NOT EXISTS etl_audit_log (
+    id SERIAL PRIMARY KEY,
+    pipeline_name VARCHAR(100) NOT NULL,
+    run_id TEXT NOT NULL,
+    execution_date DATE NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP ,
+    status VARCHAR(20) NOT NULL,
+    records_loaded INTEGER DEFAULT 0,
+    error_message TEXT
+)
+```
+
+## Database Tables Description
+
+| Table  |  Purpose                                                                     |
+|--------|------------------------------------------------------------------------------|
+| `exchange_rates` | Stores the processed currency exchange rates loaded from the API. |
+| `etl_metadata`   | Stores the latest successfully processed API timestamp used for incremental loading. |
+| `etl_audit_log`  | Records every pipeline execution, including execution status, timestamps, loaded records, and failure messages. |
 
 
 ## How to Run
@@ -269,9 +278,11 @@ http://localhost:8080
 
 ## Future Improvements
 
-- Add unit tests for Extract, Validate, Transform, and Load modules.
-- Generate data quality reports and pipeline metrics.
-- Deploy the pipeline to a cloud environment.
+- Add automated unit and integration tests.
+- Store historical pipeline metrics for monitoring.
+- Visualize ETL metrics using Grafana or Apache Superset.
+- Deploy the pipeline to a cloud environment (AWS, Azure, or GCP).
+- Integrate CI/CD for automated testing and deployment.
 
 
 

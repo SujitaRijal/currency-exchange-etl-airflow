@@ -12,16 +12,22 @@ from include.load.metadata import get_last_processed_timestamp
 from include.load.metadata import update_last_processed_timestamp
 from include.load.metadata import create_metadata_table
 from include.quality.quality_check import check_data_quality
-from airflow.providers.smtp.notifications.smtp import send_smtp_notification
 from include.utils.purge_utils import purge_old_files
+from include.load.audit import create_audit_table
+from include.load.audit import insert_audit_log
+from include.load.audit import update_audit_success
+from include.callbacks.pipeline_callback import pipeline_failure_callback
+from include.load.audit import update_audit_skipped
 import json
 import logging
+
+from airflow.sdk import get_current_context
+from datetime import datetime
 
 from airflow.models import Variable
 
 logger=logging.getLogger(__name__)
 PIPELINE_NAME = Variable.get("PIPELINE_NAME")
-ALERT_EMAIL= Variable.get("ALERT_EMAIL")
 RETENTION_DAYS = int(Variable.get("FILE_RETENTION_DAYS"))
 
 default_args = {
@@ -29,23 +35,9 @@ default_args = {
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
 
-    "on_failure_callback": send_smtp_notification(
-        to = ALERT_EMAIL,
-        subject="Airflow Task Failed: {{ti.task_id}}",
-        html_content="""
-        <h2> Currency ETL Pipeline Failed </h2>
-
-        <p><b>DAG:</b> {{ dag.dag_id }}</p>
-        <p><b>Task:</b> {{ ti.task_id }}</p>
-        <p><b>Execution Date:</b> {{ ds }}</p>
-        <p><b>Exception:</b> {{ exception }}</p>
-
-        <p>Please check the Airflow logs for more details.</p>
-        """,
-    ),
+    "on_failure_callback": pipeline_failure_callback
 
 }
-
 
 @dag (
     dag_id="CurrencyETLPipeline",
@@ -61,6 +53,28 @@ def currency_pipeline():
     start= EmptyOperator(task_id="start")
     end=EmptyOperator(task_id="end")
 
+    @task
+    def initialize_database():
+        create_metadata_table()
+        create_audit_table()
+
+        logger.info("Database initialization completed")
+
+    @task
+    #Create one audit record with status = RUNNING.
+    def start_audit(ds):
+        context= get_current_context()
+        run_id = context["dag_run"].run_id
+        start_time = datetime.now(utc)
+        insert_audit_log(
+            pipeline_name = PIPELINE_NAME,
+            run_id = run_id,
+            execution_date = ds,
+            start_time = start_time,
+            status = "RUNNING"
+        )
+        return run_id
+
     @task  #taskflow api
     def extract_exchange_rate(ds):  #ds-date string 
         data=fetch_exchange_rate()  #dag doesn't know how api works,simply calls the helper function
@@ -71,7 +85,6 @@ def currency_pipeline():
     
     @task.short_circuit   
     def check_metadata(raw_file):
-        create_metadata_table()
         logger.info("Checking metadata for incremental loading.")
         
         with open(raw_file,"r") as f:
@@ -86,6 +99,15 @@ def currency_pipeline():
 
         if api_timestamp == last_processed_timestamp:
             logger.info("No new data found, skipping downstream tasks")
+            context=get_current_context()
+            run_id = context["dag_run"].run_id
+            end_time= datetime.now(utc)
+
+            update_audit_skipped(
+                run_id= run_id,
+                end_time= end_time
+
+            )
             return False
         
         logger.info("New data found. Continuing pipeline")
@@ -110,7 +132,8 @@ def currency_pipeline():
     
     @task
     def load_data(processed_file):
-        load_exchange_rates(processed_file)
+        records_loaded = load_exchange_rates(processed_file)
+        return records_loaded
 
     @task
     def update_metadata(raw_file):
@@ -139,7 +162,19 @@ def currency_pipeline():
             ds=ds
         )
 
+    @task
+    def finish_audit_success(audit_run_id,records_loaded):
+        end_time= datetime.now(utc)
+        update_audit_success(
+            run_id = audit_run_id,
+            end_time = end_time,
+            records_loaded = records_loaded
+        )
+
+
     #task obj
+    initialize=initialize_database()
+    audit_run =start_audit()
     extract=extract_exchange_rate() #add this tag to dag
     metadata = check_metadata(extract)
     validation=validate(extract)
@@ -148,9 +183,10 @@ def currency_pipeline():
     load=load_data(transform)
     update=update_metadata(extract)
     purge_files= purge_old_output_files()
+    finish = finish_audit_success(audit_run, load)
 
     #set dependencies
-    start >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> purge_files>> end
+    start >> initialize >> audit_run >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> purge_files>> finish >> end
 
 #build dag
 dag=currency_pipeline()
