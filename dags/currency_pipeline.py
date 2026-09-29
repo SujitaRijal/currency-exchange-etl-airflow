@@ -119,7 +119,7 @@ def currency_pipeline():
         logger.info("Validation successful")
 
     
-    @task
+    @task(retries=0)
     def transform_data(raw_file, ds):
         output_file= f"/opt/airflow/output/processed/{ds}.json"
         return transform_exchange_rates(
@@ -132,8 +132,8 @@ def currency_pipeline():
     
     @task
     def load_data(processed_file):
-        records_loaded = load_exchange_rates(processed_file)
-        return records_loaded
+        load_metrics = load_exchange_rates(processed_file)
+        return load_metrics
 
     @task
     def update_metadata(raw_file):
@@ -163,12 +163,12 @@ def currency_pipeline():
         )
 
     @task
-    def finish_audit_success(audit_run_id,records_loaded):
+    def finish_audit_success(audit_run_id,load_metrics):
         end_time= datetime.now(utc)
         update_audit_success(
             run_id = audit_run_id,
             end_time = end_time,
-            records_loaded = records_loaded
+            load_metrics= load_metrics
         )
 
 

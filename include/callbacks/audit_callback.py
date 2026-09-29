@@ -9,8 +9,10 @@ def audit_failure_callback(context):
     run_id = context["dag_run"].run_id
     end_time= datetime.now(utc)
     error_message = str(context["exception"])
+    failed_task = context["task_instance"].task_id
     update_audit_failure(
         run_id= run_id,
         end_time= end_time,
+        failed_task=failed_task,
         error_message=error_message
     )

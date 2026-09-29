@@ -79,7 +79,12 @@ def load_exchange_rates(processed_file):
         logger.info(f"Duplicates Skipped  : {skipped}")
         logger.info("==================================")
 
-        return inserted
+
+        return {
+            "records_received": records_received,
+            "records_loaded" : inserted,
+            "duplicates_skipped" : skipped
+        }
 
     except Exception as e:
         conn.rollback()
