@@ -56,7 +56,7 @@ def print_pipeline_report(run_id, ds):
     #call generate piepliene report and store the returned dict in a variable
     report = generate_pipeline_report()
 
-    logger.info("================Currency ETL Report=====================")
+    logger.info("================Currency ETL Pipeline Summary=====================")
     logger.info(f"Pipeline Name              : {report['pipeline_name']}")
     logger.info(f"Generated On               : {report['generated_on']}")
     logger.info("")
@@ -73,7 +73,7 @@ def print_pipeline_report(run_id, ds):
 
     logger.info("=========================================================")
 
-    is_scheduled_run = run_id.startwith("scheduled__")
+    is_scheduled_run = run_id.startswith("scheduled__")
     if is_scheduled_run :
         save_pipeline_report(report,ds)
 
@@ -81,7 +81,7 @@ def save_pipeline_report(report,ds):
     report_file= Path(f"/opt/airflow/output/reports/{ds}.txt")
     report_file.parent.mkdir(parents=True,exist_ok=True)
     with open(report_file, "w") as f:
-        f.write("================ Currency ETL Report =====================\n")
+        f.write("================ Currency ETL Pipeline Summary =====================\n")
         f.write(f"Pipeline Name              : {report['pipeline_name']}\n")
         f.write(f"Generated On               : {report['generated_on']}\n")
         f.write("\n")
