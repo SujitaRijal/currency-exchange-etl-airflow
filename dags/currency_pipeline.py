@@ -171,7 +171,6 @@ def currency_pipeline():
             load_metrics= load_metrics
         )
 
-
     #task obj
     initialize=initialize_database()
     audit_run =start_audit()
