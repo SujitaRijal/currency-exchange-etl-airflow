@@ -18,6 +18,7 @@ from include.load.audit import insert_audit_log
 from include.load.audit import update_audit_success
 from include.callbacks.pipeline_callback import pipeline_failure_callback
 from include.load.audit import update_audit_skipped
+from include.reports.report_generator import print_pipeline_report
 import json
 import logging
 
@@ -171,6 +172,12 @@ def currency_pipeline():
             load_metrics= load_metrics
         )
 
+    @task
+    def pipeline_report(ds):
+        context = get_current_context()
+        run_id = context["dag_run"].run_id
+        print_pipeline_report(run_id, ds)
+
     #task obj
     initialize=initialize_database()
     audit_run =start_audit()
@@ -183,9 +190,10 @@ def currency_pipeline():
     update=update_metadata(extract)
     purge_files= purge_old_output_files()
     finish = finish_audit_success(audit_run, load)
+    report=pipeline_report()
 
     #set dependencies
-    start >> initialize >> audit_run >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> purge_files>> finish >> end
+    start >> initialize >> audit_run >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> purge_files>> finish >> report >> end
 
 #build dag
 dag=currency_pipeline()

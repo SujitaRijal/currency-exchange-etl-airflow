@@ -1,3 +1,4 @@
+#Calculate metrics
 from include.load.database import get_connection
 import logging
 
