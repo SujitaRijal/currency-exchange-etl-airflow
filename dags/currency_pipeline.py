@@ -188,7 +188,7 @@ def currency_pipeline():
     initialize=initialize_database()
     audit_run =start_audit()
     extract=extract_exchange_rate() #add this tag to dag
-    # metadata = check_metadata(extract)
+    metadata = check_metadata(extract)
     validation=validate(extract)
     transform=transform_data(extract)
     quality_check=quality(transform)
@@ -200,7 +200,7 @@ def currency_pipeline():
     audit_csv=export_daily_audit()
 
     #set dependencies
-    start >> initialize >> audit_run >> extract >> validation >> transform >> quality_check >> load >> update >> purge_files>> finish >> report >> audit_csv >> end
+    start >> initialize >> audit_run >> extract >> metadata >> validation >> transform >> quality_check >> load >> update >> purge_files>> finish >> report >> audit_csv >> end
 
 #build dag
 dag=currency_pipeline()
