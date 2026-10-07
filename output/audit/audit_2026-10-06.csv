@@ -1,0 +1,2 @@
+pipeline_name,run_id,execution_date,start_time,end_time,duration_seconds,status,records_received,records_loaded,duplicates_skipped,failed_task,error_message
+currency_etl,scheduled__2026-10-06T06:00:00+00:00,2026-10-06,2026-10-07 06:00:11.051121+00:00,2026-10-07 06:00:22.178063+00:00,11.13,SUCCESS,166,166,0,,
