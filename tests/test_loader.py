@@ -37,14 +37,22 @@ def fake_db():
 
     return conn, cursor
 
+@pytest.fixture
+def create_processed_file(processed_file):
+    def _create_file(data):
+        with open(processed_file, "w") as f:
+            json.dump(data, f)
+        return processed_file
+
+    return _create_file
+
 @patch("include.load.loader.get_connection")
-def test_load_exchange_rates_success(mock_get_connection,processed_file,sample_data,fake_db):
+def test_load_exchange_rates_success(mock_get_connection,sample_data,fake_db,create_processed_file):
     #Arrange
     conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
-    with open(processed_file, "w") as f:
-        json.dump(sample_data,f)
+    processed_file = create_processed_file(sample_data)
 
     cursor.rowcount = 2
 
@@ -68,13 +76,13 @@ def test_load_exchange_rates_success(mock_get_connection,processed_file,sample_d
 
 
 @patch("include.load.loader.get_connection")
-def test_load_empty_file(mock_get_connection,processed_file,fake_db):
+def test_load_empty_file(mock_get_connection,create_processed_file,fake_db):
     # Arrange
     conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
-    with open(processed_file, "w") as f:
-        json.dump([], f)
+    processed_file = create_processed_file([])
+
 
     cursor.rowcount = 0
 
@@ -101,12 +109,12 @@ def test_load_empty_file(mock_get_connection,processed_file,fake_db):
     conn.close.assert_called_once()
 
 @patch("include.load.loader.get_connection")
-def test_load_duplicate_records(mock_get_connection,processed_file,sample_data,fake_db):
+def test_load_duplicate_records(mock_get_connection,create_processed_file,sample_data,fake_db):
     conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
-    with open(processed_file, "w") as f:
-        json.dump(sample_data,f)
+    processed_file = create_processed_file(sample_data)
+
 
      # Simulate PostgreSQL inserting only one row
     cursor.rowcount = 1
@@ -132,12 +140,12 @@ def test_load_duplicate_records(mock_get_connection,processed_file,sample_data,f
     conn.close.assert_called_once()
 
 @patch("include.load.loader.get_connection")
-def test_load_database_exception(mock_get_connection,processed_file,sample_data,fake_db):
+def test_load_database_exception(mock_get_connection,create_processed_file,sample_data,fake_db):
     conn,cursor = fake_db
     mock_get_connection.return_value = conn
 
-    with open(processed_file, "w") as f:
-        json.dump(sample_data, f)
+    processed_file = create_processed_file(sample_data)
+
 
     cursor.executemany.side_effect = Exception("Database Error")
 
