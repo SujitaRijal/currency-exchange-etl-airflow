@@ -121,7 +121,7 @@ def currency_pipeline():
         logger.info("Validation successful")
 
     
-    @task(retries=0)
+    @task
     def transform_data(raw_file, ds):
         output_file= f"/opt/airflow/output/processed/{ds}.json"
         return transform_exchange_rates(
