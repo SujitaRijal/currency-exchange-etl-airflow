@@ -133,6 +133,22 @@ def test_get_start_time_exists(mock_get_connection,fake_db):
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
+@patch("include.load.audit.get_connection")
+def test_get_start_time_not_found(mock_get_connection,fake_db):
+    conn, cursor = fake_db
+    mock_get_connection.return_value = conn
+    cursor.fetchone.return_value = None
+
+    with pytest.raises(ValueError, match="No audit record found for run_id: run_001"):
+        get_start_time("run_001")
+
+    mock_get_connection.assert_called_once()
+    cursor.execute.assert_called_once()
+    cursor.fetchone.assert_called_once()
+    cursor.close.assert_called_once()
+    conn.close.assert_called_once()
+
+
 @patch("include.load.audit.get_start_time")
 @patch("include.load.audit.get_connection")
 
