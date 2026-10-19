@@ -43,10 +43,10 @@ def check_data_quality(processed_file):
 
             if exchange_rate <= 0:
                 logger.error(
-                    f"Invalid exchane rate found for {record["target_currency"]} :{exchange_rate}"
+                    f"Invalid exchane rate found for {record['target_currency']} :{exchange_rate}"
                 )
                 raise ValueError(
-                    f" Invalid exchange rate for {record["target_currecny"]}:{exchange_rate}"
+                    f" Invalid exchange rate for {record['target_currency']}:{exchange_rate}"
                 )
             
         logger.info("No duplicate currency pairs  found.")
@@ -58,5 +58,5 @@ def check_data_quality(processed_file):
         if len(data) < MINIMUM_EXPECTED_CURRENCIES:
             logger.error(f"Expected at least {MINIMUM_EXPECTED_CURRENCIES} currencies," f"but found only  {len(data)}")
             raise ValueError(f"Insufficient currency records:{len(data)}")
-        logger.info("Completeness check passed.")
+        logger.info("Completeness check passed.")   
         logger.info(f"Data quality check completed successfully.")
