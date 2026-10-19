@@ -123,7 +123,7 @@ def update_audit_success(run_id, end_time, load_metrics):
         duration_seconds = round((end_time - start_time).total_seconds(),2)
         cursor.execute(
             """ 
-            UPDATE  etl_audit_log
+            UPDATE etl_audit_log
             SET 
                 end_time = %s,
                 duration_seconds = %s,
