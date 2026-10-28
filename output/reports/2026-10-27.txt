@@ -1,0 +1,15 @@
+================ Currency ETL Pipeline Summary =====================
+Pipeline Name              : currency_etl
+Generated On               : 2026-10-28 06:47:22 UTC
+
+Total Runs                 : 35
+Successful Runs            : 27
+Failed Runs                : 1
+Skipped Runs               : 7
+Average Duration           : 54.65 seconds
+Total Records Received     : 4648
+Total Records Loaded       : 2656
+Duplicates Skipped         : 1992
+Success Rate               : 77.14%
+Failure Rate               : 2.86%
+=========================================================

@@ -1,10 +1,13 @@
 # Responsible for connecting to PostgreSQL.
 # This module knows nothing about exchange rates or business logic.
-#connection-instead of storing credentials on your code,airflow stores them securely in metadata database
+# connection-instead of storing credentials on your code,
+# airflow stores them securely in metadata database
 
 from airflow.providers.postgres.hooks.postgres import PostgresHook
- #This imports Airflow's PostgreSQL helper.
-#"Airflow, please connect to PostgreSQL using one of your saved Connections."
+
+# This imports Airflow's PostgreSQL helper.
+# "Airflow, please connect to PostgreSQL using one of your saved Connections."
+
 
 def get_connection():
     """
@@ -12,6 +15,8 @@ def get_connection():
     the Airflow Connection 'postgres_default'.
     """
 
-    hook = PostgresHook(postgres_conn_id="postgres_default") #Find the Connection whose ID is postgres_default.
+    hook = PostgresHook(
+        postgres_conn_id="postgres_default"
+    )  # Find the Connection whose ID is postgres_default.
 
-    return hook.get_conn()  #This returns a normal PostgreSQL connection object.
+    return hook.get_conn()  # This returns a normal PostgreSQL connection object.

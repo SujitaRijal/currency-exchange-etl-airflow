@@ -1,22 +1,30 @@
-import requests
-from airflow.models import Variable
 import logging
 
-logger=logging.getLogger(__name__)
+import requests
+from airflow.models import Variable
+
+logger = logging.getLogger(__name__)
+
 
 def fetch_exchange_rate():
     """
-    Fetch latest exchange rates from public API """
+    Fetch latest exchange rates from public API
+    """
     api_base_url = Variable.get("API_BASE_URL")
-    base_currency=Variable.get("BASE_CURRENCY")
+    base_currency = Variable.get("BASE_CURRENCY")
 
-    url=f"{api_base_url}/{base_currency}"
+    url = f"{api_base_url}/{base_currency}"
 
     logger.info(f"Fetching exchange rates from :{url}")
-    response=requests.get(url,timeout=30) #waits max of 30 sec,if  there's no response,exception is raised and tasks fails
-    response.raise_for_status() #error handling ,,If the HTTP status code isn't successful (2xx), stop immediately and raise an exception.
-    return response.json() #api sends json text,response.json convert it into python obj ,dictionary which the dag receives
+    # Timeout prevents the task from waiting indefinitely.
+    # If the API does not respond within 30 seconds,
+    # requests raises an exception and the task fails.
+    response = requests.get(url, timeout=30)
+    # error handling ,,If the HTTP status code isn't successful (2xx),
+    # stop immediately and raise an exception.
+    response.raise_for_status()
 
-
-
-
+    # The API returns JSON text.
+    # response.json() converts it into a Python dictionary
+    # that downstream DAG tasks can process.
+    return response.json()

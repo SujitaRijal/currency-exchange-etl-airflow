@@ -1,17 +1,18 @@
-#"What happened during each pipeline execution?"
+# "What happened during each pipeline execution?"
 
-from include.load.database import get_connection
 import logging
 
-logger=logging.getLogger(__name__)
+from include.load.database import get_connection
+
+logger = logging.getLogger(__name__)
+
 
 def create_audit_table():
-    conn=get_connection()
-    cursor=conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
-        cursor.execute (
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS etl_audit_log (
             id SERIAL PRIMARY KEY,
             pipeline_name VARCHAR(100) NOT NULL,
@@ -27,8 +28,7 @@ def create_audit_table():
             failed_task TEXT,
             error_message TEXT
             )
-            """
-        )
+            """)
         conn.commit()
         logger.info("Audit table is ready.")
 
@@ -42,16 +42,11 @@ def create_audit_table():
         conn.close()
 
 
-#Notice that I'm not including end_time, records_loaded, or error_message yet,because when the pipeline starts, we don't know them yet.
-def insert_audit_log(
-    pipeline_name,
-    run_id,
-    execution_date,
-    start_time,
-    status
-):
-    conn=get_connection()
-    cursor=conn.cursor()
+# Notice that I'm not including end_time, records_loaded, or error_message yet,
+# because when the pipeline starts, we don't know them yet.
+def insert_audit_log(pipeline_name, run_id, execution_date, start_time, status):
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
         cursor.execute(
@@ -66,18 +61,13 @@ def insert_audit_log(
             )
             VALUES(%s, %s, %s, %s, %s)
             """,
-            (
-                pipeline_name,
-                run_id,
-                execution_date,
-                start_time,
-                status
-            ),
+            (pipeline_name, run_id, execution_date, start_time, status),
         )
 
         conn.commit()
         logger.info(
-            f"Audit log created for pipeline '{pipeline_name}' " f"with run_id '{run_id}'"
+            f"Audit log created for pipeline '{pipeline_name}' "
+            f"with run_id '{run_id}'"
         )
 
     except Exception as e:
@@ -89,25 +79,26 @@ def insert_audit_log(
         cursor.close()
         conn.close()
 
+
 def get_start_time(run_id):
-    conn=get_connection()
-    cursor=conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
         cursor.execute(
             """
-            SELECT start_time 
+            SELECT start_time
             FROM etl_audit_log
             WHERE run_id = %s
             """,
-            (run_id,)
+            (run_id,),
         )
         result = cursor.fetchone()
-        if result :
+        if result:
             return result[0]
         raise ValueError(f"No audit record found for run_id: {run_id}")
     except Exception as e:
-        logger.exception("Failed to fetch start time")
+        logger.exception(f"Failed to fetch start time : {e}")
         raise
     finally:
         cursor.close()
@@ -115,16 +106,16 @@ def get_start_time(run_id):
 
 
 def update_audit_success(run_id, end_time, load_metrics):
-    conn=get_connection()
-    cursor=conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
-        start_time =get_start_time(run_id)
-        duration_seconds = round((end_time - start_time).total_seconds(),2)
+        start_time = get_start_time(run_id)
+        duration_seconds = round((end_time - start_time).total_seconds(), 2)
         cursor.execute(
-            """ 
+            """
             UPDATE etl_audit_log
-            SET 
+            SET
                 end_time = %s,
                 duration_seconds = %s,
                 status = %s,
@@ -139,29 +130,30 @@ def update_audit_success(run_id, end_time, load_metrics):
                 "SUCCESS",
                 load_metrics["records_received"],
                 load_metrics["records_loaded"],
-                load_metrics["duplicates_skipped"], 
-                run_id
-            )
+                load_metrics["duplicates_skipped"],
+                run_id,
+            ),
         )
         conn.commit()
         logger.info(f"Audit log marked SUCCESS for run_id : {run_id}")
     except Exception as e:
         conn.rollback()
-        logger.exception("Failed to update audit log")
+        logger.exception(f"Failed to update audit log :{e}")
         raise
     finally:
         cursor.close()
         conn.close()
 
-def update_audit_failure(run_id, end_time,failed_task, error_message):
-    conn=get_connection()
-    cursor=conn.cursor()
+
+def update_audit_failure(run_id, end_time, failed_task, error_message):
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
-        start_time=get_start_time(run_id)
-        duration_seconds = round((end_time - start_time).total_seconds(),2)
+        start_time = get_start_time(run_id)
+        duration_seconds = round((end_time - start_time).total_seconds(), 2)
         cursor.execute(
-            """ 
+            """
             UPDATE etl_audit_log
             SET
                 end_time = %s,
@@ -169,58 +161,47 @@ def update_audit_failure(run_id, end_time,failed_task, error_message):
                 status = %s,
                 failed_task = %s,
                 error_message = %s
-                WHERE run_id = %s; 
+                WHERE run_id = %s;
             """,
-            (
-                end_time,
-                duration_seconds,
-                "FAILED",
-                failed_task,
-                error_message,
-                run_id
-            )
+            (end_time, duration_seconds, "FAILED", failed_task, error_message, run_id),
         )
         conn.commit()
         logger.info(f"Audit log marked FAILED for run_id : {run_id}")
 
     except Exception as e:
         conn.rollback()
-        logger.exception("Failed to update audit log")
+        logger.exception(f"Failed to update audit log:{e}")
         raise
 
     finally:
         cursor.close()
         conn.close()
 
+
 def update_audit_skipped(run_id, end_time):
-    conn=get_connection()
-    cursor=conn.cursor()
+    conn = get_connection()
+    cursor = conn.cursor()
 
     try:
         start_time = get_start_time(run_id)
-        duration_seconds= round((end_time - start_time).total_seconds(),2)
+        duration_seconds = round((end_time - start_time).total_seconds(), 2)
         cursor.execute(
-            """ 
+            """
             UPDATE etl_audit_log
             SET
                 end_time = %s,
                 duration_seconds = %s,
                 status = %s
-                WHERE run_id = %s; 
+                WHERE run_id = %s;
             """,
-            (
-                end_time,
-                duration_seconds,
-                "SKIPPED",
-                run_id
-            )
+            (end_time, duration_seconds, "SKIPPED", run_id),
         )
         conn.commit()
         logger.info(f"Audit log marked SKIPPED for run_id : {run_id}")
 
     except Exception as e:
         conn.rollback()
-        logger.exception("Failed to update audit log")
+        logger.exception(f"Failed to update audit log:{e}")
         raise
 
     finally:

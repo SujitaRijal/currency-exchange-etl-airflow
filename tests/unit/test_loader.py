@@ -1,13 +1,15 @@
 import json
-import pytest
-
 from unittest.mock import Mock, patch
 
+import pytest
+
 from include.load.loader import load_exchange_rates
+
 
 @pytest.fixture
 def processed_file(tmp_path):
     return tmp_path / "processed.json"
+
 
 @pytest.fixture
 def sample_data():
@@ -28,6 +30,7 @@ def sample_data():
         },
     ]
 
+
 @pytest.fixture
 def fake_db():
     conn = Mock()
@@ -36,6 +39,7 @@ def fake_db():
     conn.cursor.return_value = cursor
 
     return conn, cursor
+
 
 @pytest.fixture
 def create_processed_file(processed_file):
@@ -46,9 +50,12 @@ def create_processed_file(processed_file):
 
     return _create_file
 
+
 @patch("include.load.loader.get_connection")
-def test_load_exchange_rates_success(mock_get_connection,sample_data,fake_db,create_processed_file):
-    #Arrange
+def test_load_exchange_rates_success(
+    mock_get_connection, sample_data, fake_db, create_processed_file
+):
+    # Arrange
     conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
@@ -56,10 +63,10 @@ def test_load_exchange_rates_success(mock_get_connection,sample_data,fake_db,cre
 
     cursor.rowcount = 2
 
-    #Act
+    # Act
     result = load_exchange_rates(processed_file)
 
-    #Assert
+    # Assert
     assert result == {
         "records_received": 2,
         "records_loaded": 2,
@@ -76,20 +83,19 @@ def test_load_exchange_rates_success(mock_get_connection,sample_data,fake_db,cre
 
 
 @patch("include.load.loader.get_connection")
-def test_load_empty_file(mock_get_connection,create_processed_file,fake_db):
+def test_load_empty_file(mock_get_connection, create_processed_file, fake_db):
     # Arrange
     conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
     processed_file = create_processed_file([])
 
-
     cursor.rowcount = 0
 
-    #Act
+    # Act
     result = load_exchange_rates(processed_file)
 
-    #Assert
+    # Assert
     assert result == {
         "records_received": 0,
         "records_loaded": 0,
@@ -108,26 +114,28 @@ def test_load_empty_file(mock_get_connection,create_processed_file,fake_db):
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
+
 @patch("include.load.loader.get_connection")
-def test_load_duplicate_records(mock_get_connection,create_processed_file,sample_data,fake_db):
+def test_load_duplicate_records(
+    mock_get_connection, create_processed_file, sample_data, fake_db
+):
     conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
     processed_file = create_processed_file(sample_data)
 
-
-     # Simulate PostgreSQL inserting only one row
+    # Simulate PostgreSQL inserting only one row
     cursor.rowcount = 1
 
-    #Act
+    # Act
     result = load_exchange_rates(processed_file)
 
-    #Assert
+    # Assert
     assert result == {
-            "records_received": 2,
-            "records_loaded": 1,
-            "duplicates_skipped": 1,
-        }
+        "records_received": 2,
+        "records_loaded": 1,
+        "duplicates_skipped": 1,
+    }
     mock_get_connection.assert_called_once()
 
     cursor.execute.assert_called_once()
@@ -139,18 +147,20 @@ def test_load_duplicate_records(mock_get_connection,create_processed_file,sample
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
 
+
 @patch("include.load.loader.get_connection")
-def test_load_database_exception(mock_get_connection,create_processed_file,sample_data,fake_db):
-    conn,cursor = fake_db
+def test_load_database_exception(
+    mock_get_connection, create_processed_file, sample_data, fake_db
+):
+    conn, cursor = fake_db
     mock_get_connection.return_value = conn
 
     processed_file = create_processed_file(sample_data)
 
-
     cursor.executemany.side_effect = Exception("Database Error")
 
-    #Act + Assert
-    with pytest.raises(Exception, match ="Database Error"):
+    # Act + Assert
+    with pytest.raises(Exception, match="Database Error"):
         load_exchange_rates(processed_file)
 
     mock_get_connection.assert_called_once()
@@ -163,8 +173,3 @@ def test_load_database_exception(mock_get_connection,create_processed_file,sampl
 
     cursor.close.assert_called_once()
     conn.close.assert_called_once()
-
-    
-    
-
-
