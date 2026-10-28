@@ -1,6 +1,7 @@
 import logging
 
 import requests
+
 from airflow.models import Variable
 
 logger = logging.getLogger(__name__)

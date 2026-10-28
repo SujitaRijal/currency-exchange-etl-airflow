@@ -1,7 +1,8 @@
+from pendulum import datetime
+
 from airflow.providers.smtp.operators.smtp import EmailOperator
 from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
-from pendulum import datetime
 
 
 @dag(

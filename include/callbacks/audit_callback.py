@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from airflow.utils.timezone import utc
-
 from include.load.audit import update_audit_failure
 
 

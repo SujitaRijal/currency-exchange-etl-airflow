@@ -7,7 +7,6 @@ from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag, get_current_context, task
 from airflow.timetables.interval import CronDataIntervalTimetable
 from airflow.utils.timezone import utc
-
 from include.callbacks.pipeline_callback import pipeline_failure_callback
 from include.extract.api_client import fetch_exchange_rate
 from include.load.audit import (

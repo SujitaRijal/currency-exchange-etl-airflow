@@ -1,7 +1,5 @@
-from datetime import date
-
-
 import json
+from datetime import date
 
 import pytest
 
@@ -9,19 +7,22 @@ from include.load.database import get_connection
 from include.load.loader import load_exchange_rates
 
 TEST_DATE = date.today().isoformat()
+
+
 @pytest.fixture
 def cleanup_exchange_rates():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         DELETE FROM exchange_rates
         WHERE load_date = %s
         AND base_currency = 'USD'
         AND target_currency IN ('EUR','GBP','NPR');
         """,
-        (TEST_DATE,)
-        )
+        (TEST_DATE,),
+    )
 
     conn.commit()
 
@@ -33,14 +34,15 @@ def cleanup_exchange_rates():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         DELETE FROM exchange_rates
         WHERE load_date = %s
         AND base_currency = 'USD'
         AND target_currency IN ('EUR','GBP','NPR');
         """,
-        (TEST_DATE,)
-        )
+        (TEST_DATE,),
+    )
     conn.commit()
     cursor.close()
     conn.close()
@@ -87,15 +89,16 @@ def test_load_exchange_rates(tmp_path, cleanup_exchange_rates):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
             SELECT COUNT(*)
             FROM exchange_rates
             WHERE load_date = %s
             AND base_currency = 'USD'
             AND target_currency IN ('EUR','GBP','NPR');
             """,
-            (TEST_DATE,)
-            )
+        (TEST_DATE,),
+    )
 
     count = cursor.fetchone()[0]
     assert count == 3
@@ -149,15 +152,16 @@ def test_load_exchange_rates_duplicates(tmp_path, cleanup_exchange_rates):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
          SELECT COUNT(*)
          FROM exchange_rates
          WHERE load_date = %s
          AND base_currency = 'USD'
         AND target_currency IN ('EUR','GBP','NPR');
         """,
-        (TEST_DATE,)
-        )
+        (TEST_DATE,),
+    )
     count = cursor.fetchone()[0]
     assert count == 3
     cursor.close()

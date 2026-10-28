@@ -1,5 +1,5 @@
+from airflow.providers.standard.operators.python import ShortCircuitOperator
 from airflow.timetables.interval import CronDataIntervalTimetable
-
 from dags.currency_pipeline import dag
 
 
@@ -75,3 +75,40 @@ def test_dependencies():
     assert "pipeline_report" in dag.get_task("finish_audit_success").downstream_task_ids
     assert "export_daily_audit" in dag.get_task("pipeline_report").downstream_task_ids
     assert "end" in dag.get_task("export_daily_audit").downstream_task_ids
+
+
+def test_task_retries_configuration():
+    task = dag.get_task("extract_exchange_rate")
+
+    assert task.retries == 2
+    assert task.retry_delay.total_seconds() == 300
+
+
+def test_failure_callback_configured():
+    task = dag.get_task("extract_exchange_rate")
+
+    assert task.on_failure_callback is not None
+
+
+def test_metadata_task_is_short_circuit():
+    task = dag.get_task("check_metadata")
+
+    assert isinstance(task, ShortCircuitOperator)
+
+
+def test_metadata_controls_downstream_tasks():
+    task = dag.get_task("check_metadata")
+
+    assert "validate" in task.downstream_task_ids
+
+
+def test_load_task_exists():
+    task = dag.get_task("load_data")
+
+    assert task.task_id == "load_data"
+
+
+def test_end_task_exists():
+    task = dag.get_task("end")
+
+    assert task.task_id == "end"

@@ -5,7 +5,6 @@ from pathlib import Path
 
 from airflow.models import Variable
 from airflow.utils.timezone import utc
-
 from include.reports.metrics import (
     get_average_duration,
     get_failed_runs,

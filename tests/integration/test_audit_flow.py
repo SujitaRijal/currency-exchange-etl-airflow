@@ -1,8 +1,8 @@
 from datetime import datetime, timedelta
 
 import pytest
-from airflow.utils.timezone import utc
 
+from airflow.utils.timezone import utc
 from include.load.audit import (
     create_audit_table,
     insert_audit_log,
