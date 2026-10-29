@@ -1,0 +1,55 @@
+name: CI PIPELINE
+
+on:
+  push:
+    branches:
+      -main
+      -feature/*
+  pull_request:
+    branches:
+      -main
+
+jobs:
+  test:
+
+    runs_on: ubuntu-latest
+
+    steps: 
+      -name: Checkout repository
+      -uses: actions/checkout@v4
+
+      -name: Build Docker image
+      -uses: docker compose build
+
+      -name: Initialize Airflow
+      -uses: docker compose up airflow-init
+
+      -name: Start Airflow Services
+      -uses: docker compose up -d
+
+      -name: Wait for services
+      -uses: sleep 30
+
+      -name: Run isort check
+       run: |
+         docker compose exec -T airflow-apiserver isort . --check-only
+      
+      -name: Run black check
+       run: |
+         docker compose exec -T airflow-apiserver black . --check
+      
+      -name: Run flake8
+       run: |
+         docker compose exec -T airflow-apiserver flake8 . 
+
+      -name: Run pytest with coverage
+       run: |
+         docker compose exec -T airflow-apiserver \
+         python -m pytest -v \
+         --cov=include \
+         --cov=dags \
+         --cov-report=term-missing
+
+      -name: Shutdown containers
+      if: always()
+      run: docker compose down 
