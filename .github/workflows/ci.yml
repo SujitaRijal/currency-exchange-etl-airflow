@@ -56,6 +56,14 @@ jobs:
           airflow variables set API_BASE_URL https://test-api.example.com
 
 
+      - name: Initialize Database Schema
+        run: |
+          docker compose exec -T airflow-apiserver \
+          python -c "
+          from include.load.schema import create_exchange_rates_table
+          create_exchange_rates_table()
+          "
+
       - name: Create Airflow Connection
         run: |
           docker compose exec -T airflow-apiserver \
@@ -77,8 +85,8 @@ jobs:
           --conn-login test@example.com \
           --conn-password dummy_password \
           --conn-extra '{"smtp_starttls": true, "smtp_ssl": false}' 
-          
-           
+
+
       - name: Run isort check
         run: |
           docker compose exec -T airflow-apiserver isort . --check-only
