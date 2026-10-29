@@ -31,15 +31,29 @@ jobs:
 
 
       - name: Initialize Airflow
-        run: docker compose up airflow-init
+        run: docker compose run --rm airflow-init
 
 
       - name: Start Airflow Services
         run: docker compose up -d --wait
 
+      
+      - name: Create Airflow Variables
+        run: |
+          docker compose exec -T airflow-apiserver \
+          airflow variables set ALERT_EMAIL test@example.com
 
-      - name: Wait for services
-        run: sleep 30
+          docker compose exec -T airflow-apiserver \
+          airflow variables set PIPELINE_NAME CurrencyETLPipeline
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set FILE_RETENTION_DAYS 7
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set BASE_CURRENCY USD
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set API_BASE_URL https://test-api.example.com
 
 
       - name: Run isort check
@@ -68,4 +82,4 @@ jobs:
 
       - name: Shutdown containers
         if: always()
-        run: docker compose down
+        run: docker compose down -v
