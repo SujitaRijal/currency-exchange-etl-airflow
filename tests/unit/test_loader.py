@@ -74,7 +74,6 @@ def test_load_exchange_rates_success(
     }
 
     mock_get_connection.assert_called_once()
-    cursor.execute.assert_called_once()
     cursor.executemany.assert_called_once()
     conn.commit.assert_called_once()
     conn.rollback.assert_not_called()
@@ -103,7 +102,6 @@ def test_load_empty_file(mock_get_connection, create_processed_file, fake_db):
     }
 
     mock_get_connection.assert_called_once()
-    cursor.execute.assert_called_once()
     cursor.executemany.assert_called_once()
     _, values = cursor.executemany.call_args.args
     assert values == []
@@ -137,8 +135,6 @@ def test_load_duplicate_records(
         "duplicates_skipped": 1,
     }
     mock_get_connection.assert_called_once()
-
-    cursor.execute.assert_called_once()
     cursor.executemany.assert_called_once()
 
     conn.commit.assert_called_once()
@@ -164,8 +160,6 @@ def test_load_database_exception(
         load_exchange_rates(processed_file)
 
     mock_get_connection.assert_called_once()
-
-    cursor.execute.assert_called_once()
     cursor.executemany.assert_called_once()
 
     conn.rollback.assert_called_once()

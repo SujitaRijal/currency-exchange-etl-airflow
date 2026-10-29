@@ -1,0 +1,125 @@
+name: CI PIPELINE
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+
+  pull_request:
+    branches:
+      - main
+
+
+jobs:
+  test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+
+      - name: Set Airflow UID
+        run: echo "AIRFLOW_UID=50000" >> .env
+
+
+      - name: Build Docker image
+        run: docker compose build
+
+
+      - name: Initialize Airflow
+        run: docker compose run --rm airflow-init
+
+
+      - name: Start Airflow Services
+        run: docker compose up -d --wait
+
+
+      - name: Wait for Airflow
+        run: sleep 20
+
+      
+      - name: Check Airflow Services
+        run: docker compose ps
+
+      
+      - name: Create Airflow Variables
+        run: |
+          docker compose exec -T airflow-apiserver \
+          airflow variables set ALERT_EMAIL test@example.com
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set PIPELINE_NAME CurrencyETLPipeline
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set FILE_RETENTION_DAYS 7
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set BASE_CURRENCY USD
+
+          docker compose exec -T airflow-apiserver \
+          airflow variables set API_BASE_URL https://test-api.example.com
+
+
+      - name: Create Airflow Connection
+        run: |
+          docker compose exec -T airflow-apiserver \
+          airflow connections add postgres_default \
+          --conn-type postgres \
+          --conn-host postgres \
+          --conn-login airflow \
+          --conn-password airflow \
+          --conn-port 5432 \
+          --conn-schema airflow
+
+      - name: Create SMTP Connection
+        run: |
+          docker compose exec -T airflow-apiserver \
+          airflow connections add smtp_default \
+          --conn-type smtp \
+          --conn-host smtp.gmail.com \
+          --conn-port 587 \
+          --conn-login test@example.com \
+          --conn-password dummy_password \
+          --conn-extra '{"smtp_starttls": true, "smtp_ssl": false}' 
+
+
+      - name: Initialize Database Schema
+        run: |
+          docker compose exec -T airflow-apiserver \
+          python -c "
+          from include.load.schema import create_exchange_rates_table
+          create_exchange_rates_table()
+          "
+
+
+      - name: Run isort check
+        run: |
+          docker compose exec -T airflow-apiserver isort . --check-only
+
+
+      - name: Run black check
+        run: |
+          docker compose exec -T airflow-apiserver black . --check
+
+
+      - name: Run flake8
+        run: |
+          docker compose exec -T airflow-apiserver flake8 .
+
+
+      - name: Run pytest with coverage
+        run: |
+          docker compose exec -T airflow-apiserver \
+          python -m pytest -v \
+          --cov=include \
+          --cov=dags \
+          --cov-report=term-missing
+
+
+      - name: Shutdown containers
+        if: always()
+        run: docker compose down -v

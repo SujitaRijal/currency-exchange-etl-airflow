@@ -21,6 +21,7 @@ from include.load.metadata import (
     get_last_processed_timestamp,
     update_last_processed_timestamp,
 )
+from include.load.schema import create_exchange_rates_table
 from include.quality.quality_check import check_data_quality
 from include.reports.audit_export import export_audit_csv
 from include.reports.report_generator import print_pipeline_report
@@ -58,7 +59,7 @@ def currency_pipeline():
     def initialize_database():
         create_metadata_table()
         create_audit_table()
-
+        create_exchange_rates_table()
         logger.info("Database initialization completed")
 
     @task
