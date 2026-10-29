@@ -37,6 +37,14 @@ jobs:
       - name: Start Airflow Services
         run: docker compose up -d --wait
 
+
+      - name: Wait for Airflow
+        run: sleep 20
+
+      
+      - name: Check Airflow Services
+        run: docker compose ps
+
       
       - name: Create Airflow Variables
         run: |
@@ -55,14 +63,6 @@ jobs:
           docker compose exec -T airflow-apiserver \
           airflow variables set API_BASE_URL https://test-api.example.com
 
-
-      - name: Initialize Database Schema
-        run: |
-          docker compose exec -T airflow-apiserver \
-          python -c "
-          from include.load.schema import create_exchange_rates_table
-          create_exchange_rates_table()
-          "
 
       - name: Create Airflow Connection
         run: |
@@ -85,6 +85,15 @@ jobs:
           --conn-login test@example.com \
           --conn-password dummy_password \
           --conn-extra '{"smtp_starttls": true, "smtp_ssl": false}' 
+
+
+      - name: Initialize Database Schema
+        run: |
+          docker compose exec -T airflow-apiserver \
+          python -c "
+          from include.load.schema import create_exchange_rates_table
+          create_exchange_rates_table()
+          "
 
 
       - name: Run isort check
