@@ -1,7 +1,13 @@
-from unittest.mock import Mock, patch
 from pathlib import Path
-from include.reports.report_generator import (generate_pipeline_report,print_pipeline_report,save_pipeline_report)
-from include.reports.report_generator import PIPELINE_NAME
+from unittest.mock import patch
+
+from include.reports.report_generator import (
+    PIPELINE_NAME,
+    generate_pipeline_report,
+    print_pipeline_report,
+    save_pipeline_report,
+)
+
 
 @patch("include.reports.report_generator.get_failure_rate")
 @patch("include.reports.report_generator.get_success_rate")
@@ -13,9 +19,20 @@ from include.reports.report_generator import PIPELINE_NAME
 @patch("include.reports.report_generator.get_failed_runs")
 @patch("include.reports.report_generator.get_successful_runs")
 @patch("include.reports.report_generator.get_total_runs")
-def test_generate_pipeline_report_success(mock_get_total_runs,mock_get_successful_runs,mock_get_failed_runs,mock_get_skipped_runs,mock_get_average_duration,mock_get_total_records_received,mock_get_total_records_loaded,mock_total_duplicates_skipped,mock_get_success_rate,mock_get_failure_rate):
+def test_generate_pipeline_report_success(
+    mock_get_total_runs,
+    mock_get_successful_runs,
+    mock_get_failed_runs,
+    mock_get_skipped_runs,
+    mock_get_average_duration,
+    mock_get_total_records_received,
+    mock_get_total_records_loaded,
+    mock_total_duplicates_skipped,
+    mock_get_success_rate,
+    mock_get_failure_rate,
+):
     mock_get_total_runs.return_value = 10
-    mock_get_successful_runs.return_value = 8 
+    mock_get_successful_runs.return_value = 8
     mock_get_failed_runs.return_value = 1
     mock_get_skipped_runs.return_value = 1
     mock_get_average_duration.return_value = 45.5
@@ -51,11 +68,13 @@ def test_generate_pipeline_report_success(mock_get_total_runs,mock_get_successfu
     mock_get_success_rate.assert_called_once()
     mock_get_failure_rate.assert_called_once()
 
+
 @patch("include.reports.report_generator.save_pipeline_report")
 @patch("include.reports.report_generator.generate_pipeline_report")
-
-def test_print_pipeline_report_scheduled_run(mock_generate_pipeline_report, mock_save_pipeline_report):
-    mock_generate_pipeline_report.return_value ={
+def test_print_pipeline_report_scheduled_run(
+    mock_generate_pipeline_report, mock_save_pipeline_report
+):
+    mock_generate_pipeline_report.return_value = {
         "pipeline_name": "CurrencyETLPipeline",
         "generated_on": "2026-10-25",
         "total_runs": 10,
@@ -67,20 +86,23 @@ def test_print_pipeline_report_scheduled_run(mock_generate_pipeline_report, mock
         "total_records_loaded": 168,
         "duplicates_skipped": 2,
         "success_rate": 80.0,
-        "failure_rate": 10.0
+        "failure_rate": 10.0,
     }
 
     print_pipeline_report("scheduled__2026-10-25", "2026-10-25")
 
     mock_generate_pipeline_report.assert_called_once()
     mock_save_pipeline_report.assert_called_once_with(
-        mock_generate_pipeline_report.return_value,
-        "2026-10-25"
+        mock_generate_pipeline_report.return_value, "2026-10-25"
     )
+
+
 @patch("include.reports.report_generator.save_pipeline_report")
 @patch("include.reports.report_generator.generate_pipeline_report")
-def test_print_pipeline_report_manual_run(mock_generate_pipeline_report,mock_save_pipeline_report):
-    mock_generate_pipeline_report.return_value ={
+def test_print_pipeline_report_manual_run(
+    mock_generate_pipeline_report, mock_save_pipeline_report
+):
+    mock_generate_pipeline_report.return_value = {
         "pipeline_name": "CurrencyETLPipeline",
         "generated_on": "2026-10-25",
         "total_runs": 10,
@@ -92,7 +114,7 @@ def test_print_pipeline_report_manual_run(mock_generate_pipeline_report,mock_sav
         "total_records_loaded": 168,
         "duplicates_skipped": 2,
         "success_rate": 80.0,
-        "failure_rate": 10.0
+        "failure_rate": 10.0,
     }
 
     print_pipeline_report("manual__2026-10-25", "2026-10-25")
@@ -116,37 +138,25 @@ def test_save_pipeline_report_success(tmp_path, monkeypatch):
         "total_records_loaded": 168,
         "duplicates_skipped": 2,
         "success_rate": 80.0,
-        "failure_rate": 10.0
+        "failure_rate": 10.0,
     }
-
 
     # Replace Path inside report_generator temporarily
     def fake_path(path):
         return tmp_path / Path(path).name
 
-
-    monkeypatch.setattr(
-        "include.reports.report_generator.Path",
-        fake_path
-    )
-
+    monkeypatch.setattr("include.reports.report_generator.Path", fake_path)
 
     # Act
-    save_pipeline_report(
-        report,
-        "2026-10-25"
-    )
-
+    save_pipeline_report(report, "2026-10-25")
 
     # Assert
     file_path = tmp_path / "2026-10-25.txt"
 
     assert file_path.exists()
 
-
     with open(file_path, "r") as f:
         content = f.read()
-
 
     assert "CurrencyETLPipeline" in content
     assert "Generated On" in content
@@ -160,4 +170,3 @@ def test_save_pipeline_report_success(tmp_path, monkeypatch):
     assert "Duplicates Skipped" in content
     assert "Success Rate" in content
     assert "Failure Rate" in content
-    

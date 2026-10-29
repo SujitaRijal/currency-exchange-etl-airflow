@@ -1,5 +1,6 @@
 from include.load.database import get_connection
 
+
 def test_postgres_connection():
     conn = get_connection()
     assert conn is not None

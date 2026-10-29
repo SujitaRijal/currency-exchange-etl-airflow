@@ -1,12 +1,12 @@
+from airflow.models import Variable
 from airflow.providers.smtp.notifications.smtp import send_smtp_notification
 
-from airflow.models import Variable
-ALERT_EMAIL= Variable.get("ALERT_EMAIL")
+ALERT_EMAIL = Variable.get("ALERT_EMAIL")
 
 smtp_callback = send_smtp_notification(
-        to = ALERT_EMAIL,
-        subject="Airflow Task Failed: {{ti.task_id}}",
-        html_content="""
+    to=ALERT_EMAIL,
+    subject="Airflow Task Failed: {{ti.task_id}}",
+    html_content="""
         <h2> Currency ETL Pipeline Failed </h2>
 
         <p><b>DAG:</b> {{ dag.dag_id }}</p>
@@ -16,7 +16,8 @@ smtp_callback = send_smtp_notification(
 
         <p>Please check the Airflow logs for more details.</p>
         """,
-    )
+)
+
 
 def email_failure_callback(context):
     """

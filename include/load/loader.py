@@ -1,10 +1,12 @@
-#responsible for reading processed json,calling database connection,inserting rows,knows nthg about how posgres credentials are stored
+# responsible for reading processed json,calling database connection,
+# inserting rows,knows nthg about how posgres credentials are stored
 
 import json
-from include.load.database import get_connection
 import logging
 
-logger=logging.getLogger(__name__)
+from include.load.database import get_connection
+
+logger = logging.getLogger(__name__)
 
 
 def load_exchange_rates(processed_file):
@@ -13,12 +15,13 @@ def load_exchange_rates(processed_file):
 
     """
     with open(processed_file) as f:
-        data=json.load(f)
+        data = json.load(f)
 
-    #connect to postgresql
-    conn = get_connection()  #conn-open connection to PostgreSQL
+    # connect to postgresql
+    conn = get_connection()  # conn-open connection to PostgreSQL
 
-    cursor = conn.cursor() #connection alone can't execute sql-need a cursor,cursor is what actually sends sql commands
+    cursor = conn.cursor()  # connection alone can't execute sql-need a cursor,
+    # cursor is what actually sends sql commands
 
     try:
         cursor.execute("""
@@ -34,20 +37,20 @@ def load_exchange_rates(processed_file):
         )
         """)
 
-        #build the list of values for bulk insert
+        # build the list of values for bulk insert
         values = [
-             (
+            (
                 record["load_date"],
                 record["source_timestamp"],
                 record["base_currency"],
                 record["target_currency"],
-                record["exchange_rate"]
-             ) 
+                record["exchange_rate"],
+            )
             for record in data
-        ]   
+        ]
 
         cursor.executemany(
-            """ 
+            """
             INSERT INTO exchange_rates(
             load_date,
             source_timestamp,
@@ -55,21 +58,21 @@ def load_exchange_rates(processed_file):
             target_currency,
             exchange_rate
             )
-            VALUES (%s, %s, %s, %s, %s) 
+            VALUES (%s, %s, %s, %s, %s)
 
-            ON CONFLICT(load_date,base_currency,target_currency) 
+            ON CONFLICT(load_date,base_currency,target_currency)
             DO NOTHING;
             """,
-            values
+            values,
         )
-        #%s simply a placeholder for a value
-    
+        # %s simply a placeholder for a value
+
         inserted = cursor.rowcount
-        skipped = len(values)-inserted
+        skipped = len(values) - inserted
 
-        conn.commit()  #everything in this transaction is correct, save it permanently
+        conn.commit()  # everything in this transaction is correct, save it permanently
 
-        records_received=len(data)
+        records_received = len(data)
         # -----------------------------
         # Load summary
         # -----------------------------
@@ -79,11 +82,10 @@ def load_exchange_rates(processed_file):
         logger.info(f"Duplicates Skipped  : {skipped}")
         logger.info("==================================")
 
-
         return {
             "records_received": records_received,
-            "records_loaded" : inserted,
-            "duplicates_skipped" : skipped
+            "records_loaded": inserted,
+            "duplicates_skipped": skipped,
         }
 
     except Exception as e:
@@ -92,10 +94,6 @@ def load_exchange_rates(processed_file):
         raise
 
     finally:
-        cursor.close() #done executing sql,release the cursor
+        cursor.close()  # done executing sql,release the cursor
 
-        conn.close()  #done talking to PostgreSQL, so we close connection
-
-
-
-    
+        conn.close()  # done talking to PostgreSQL, so we close connection

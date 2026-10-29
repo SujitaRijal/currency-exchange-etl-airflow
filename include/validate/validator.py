@@ -1,6 +1,9 @@
 import json
 import logging
-logger = logging.getLogger(__name__)  #logging-logging module, getLogger()-creates or retrieves a logger,__name__-gives the name of current python module
+
+logger = logging.getLogger(__name__)  # logging-logging module,
+# getLogger()-creates or retrieves a logger,
+# __name__-gives the name of current python module
 
 
 def validate_exchange_rates(raw_file):
@@ -51,5 +54,5 @@ def validate_exchange_rates(raw_file):
     if not data["rates"]:
         raise ValueError("Rates dictionary is empty.")
 
-   # print("Validation successful.")
-    logger.info("Validation Successful") 
+    # print("Validation successful.")
+    logger.info("Validation Successful")

@@ -1,5 +1,7 @@
 from unittest.mock import patch
+
 from include.callbacks.email_callback import email_failure_callback
+
 
 @patch("include.callbacks.email_callback.smtp_callback")
 def test_email_failure_callback_success(mock_smpt_callback):

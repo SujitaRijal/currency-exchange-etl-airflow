@@ -1,10 +1,18 @@
 from datetime import datetime, timedelta
-from airflow.utils.timezone import utc
+
 import pytest
 
-from include.load.audit import (create_audit_table, insert_audit_log,update_audit_success,update_audit_failure,update_audit_skipped)
-
+from airflow.utils.timezone import utc
+from include.load.audit import (
+    create_audit_table,
+    insert_audit_log,
+    update_audit_failure,
+    update_audit_skipped,
+    update_audit_success,
+)
 from include.load.database import get_connection
+
+
 @pytest.fixture
 def cleanup_audit_records():
     yield
@@ -12,17 +20,16 @@ def cleanup_audit_records():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         DELETE FROM etl_audit_log
         WHERE run_id LIKE 'integration_%';
-        """
-    )
+        """)
 
     conn.commit()
 
     cursor.close()
     conn.close()
+
 
 def test_insert_audit_log(cleanup_audit_records):
     create_audit_table()
@@ -30,11 +37,11 @@ def test_insert_audit_log(cleanup_audit_records):
     run_id = "integration_test_001"
 
     insert_audit_log(
-        pipeline_name = "CurrencyETLPipeline",
-        run_id = run_id,
-        execution_date = "2026-10-25",
-        start_time = datetime.now(utc),
-        status = "RUNNING"
+        pipeline_name="CurrencyETLPipeline",
+        run_id=run_id,
+        execution_date="2026-10-25",
+        start_time=datetime.now(utc),
+        status="RUNNING",
     )
     # # Verify from real database
     conn = get_connection()
@@ -46,47 +53,44 @@ def test_insert_audit_log(cleanup_audit_records):
         FROM etl_audit_log
         WHERE run_id = %s;
         """,
-        (run_id,)
+        (run_id,),
     )
 
     result = cursor.fetchone()
     assert result[0] == "CurrencyETLPipeline"
     assert result[1] == "RUNNING"
 
+
 def test_update_audit_success(cleanup_audit_records):
     create_audit_table()
     run_id = "integration_success_001"
 
-    start_time =datetime.now(utc)
+    start_time = datetime.now(utc)
     # # First create RUNNING audit record
     insert_audit_log(
-        pipeline_name = "CurrencyETLPipeline",
-        run_id = run_id,
-        execution_date = "2026-10-25",
-        start_time = start_time,
-        status = "RUNNING"
-    )
-    load_metrics= {
-        "records_received":170,
-        "records_loaded":168,
-        "duplicates_skipped":2
-    }
-    end_time = start_time + timedelta(seconds = 120)
-
-    #update RUNNING-SUCCESS
-    update_audit_success(
+        pipeline_name="CurrencyETLPipeline",
         run_id=run_id,
-        end_time=end_time,
-        load_metrics=load_metrics
+        execution_date="2026-10-25",
+        start_time=start_time,
+        status="RUNNING",
     )
+    load_metrics = {
+        "records_received": 170,
+        "records_loaded": 168,
+        "duplicates_skipped": 2,
+    }
+    end_time = start_time + timedelta(seconds=120)
 
-    #verify from real database
-    conn= get_connection()
+    # update RUNNING-SUCCESS
+    update_audit_success(run_id=run_id, end_time=end_time, load_metrics=load_metrics)
+
+    # verify from real database
+    conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        SELECT 
+        SELECT
             status,
             records_received,
             records_loaded,
@@ -95,7 +99,7 @@ def test_update_audit_success(cleanup_audit_records):
         FROM etl_audit_log
         WHERE run_id = %s;
         """,
-        (run_id,)
+        (run_id,),
     )
 
     result = cursor.fetchone()
@@ -108,35 +112,36 @@ def test_update_audit_success(cleanup_audit_records):
     cursor.close()
     conn.close()
 
+
 def test_update_audit_failure(cleanup_audit_records):
     create_audit_table()
     run_id = "integration_failure_001"
     start_time = datetime.now(utc)
 
-    #first create running audit record
+    # first create running audit record
     insert_audit_log(
-        pipeline_name ="CurrencyETLPipeline",
-        run_id = run_id,
-        execution_date = "2026-10-25",
-        start_time = start_time,
-        status = "RUNNING"
+        pipeline_name="CurrencyETLPipeline",
+        run_id=run_id,
+        execution_date="2026-10-25",
+        start_time=start_time,
+        status="RUNNING",
     )
-    end_time = start_time + timedelta(seconds= 30)
-    #Update Running- Failed
+    end_time = start_time + timedelta(seconds=30)
+    # Update Running- Failed
     update_audit_failure(
         run_id=run_id,
         end_time=end_time,
         failed_task="transform_data",
-        error_message="Validation failed"
+        error_message="Validation failed",
     )
 
-    #Verify from real database
+    # Verify from real database
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        SELECT 
+        SELECT
             status,
             failed_task,
             error_message,
@@ -144,7 +149,7 @@ def test_update_audit_failure(cleanup_audit_records):
         FROM etl_audit_log
         WHERE run_id = %s;
         """,
-        (run_id,)
+        (run_id,),
     )
 
     result = cursor.fetchone()
@@ -162,34 +167,31 @@ def test_update_audit_skipped(cleanup_audit_records):
     run_id = "integration_skipped_001"
     start_time = datetime.now(utc)
 
-    #first create running audit record
+    # first create running audit record
     insert_audit_log(
-        pipeline_name ="CurrencyETLPipeline",
-        run_id = run_id,
-        execution_date = "2026-10-25",
-        start_time = start_time,
-        status = "RUNNING"
-    )
-    end_time = start_time + timedelta(seconds= 10)
-    #Update Running- Skipped
-    update_audit_skipped(
+        pipeline_name="CurrencyETLPipeline",
         run_id=run_id,
-        end_time=end_time
+        execution_date="2026-10-25",
+        start_time=start_time,
+        status="RUNNING",
     )
+    end_time = start_time + timedelta(seconds=10)
+    # Update Running- Skipped
+    update_audit_skipped(run_id=run_id, end_time=end_time)
 
-    #Verify from real database
+    # Verify from real database
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        SELECT 
+        SELECT
             status,
             duration_seconds
         FROM etl_audit_log
         WHERE run_id = %s;
         """,
-        (run_id,)
+        (run_id,),
     )
 
     result = cursor.fetchone()
@@ -198,6 +200,3 @@ def test_update_audit_skipped(cleanup_audit_records):
 
     cursor.close()
     conn.close()
-
-
-    
