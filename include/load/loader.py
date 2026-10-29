@@ -24,18 +24,18 @@ def load_exchange_rates(processed_file):
     # cursor is what actually sends sql commands
 
     try:
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS exchange_rates(
-        id SERIAL PRIMARY KEY,
-        load_date DATE,
-        source_timestamp TEXT,
-        base_currency VARCHAR(10),
-        target_currency VARCHAR(10),
-        exchange_rate NUMERIC(20,8),
+        # cursor.execute("""
+        # CREATE TABLE IF NOT EXISTS exchange_rates(
+        # id SERIAL PRIMARY KEY,
+        # load_date DATE,
+        # source_timestamp TEXT,
+        # base_currency VARCHAR(10),
+        # target_currency VARCHAR(10),
+        # exchange_rate NUMERIC(20,8),
 
-        UNIQUE(load_date,base_currency,target_currency)
-        )
-        """)
+        # UNIQUE(load_date,base_currency,target_currency)
+        # )
+        # """)
 
         # build the list of values for bulk insert
         values = [
