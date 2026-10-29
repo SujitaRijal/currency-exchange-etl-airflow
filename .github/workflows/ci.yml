@@ -56,6 +56,29 @@ jobs:
           airflow variables set API_BASE_URL https://test-api.example.com
 
 
+      - name: Create Airflow Connection
+        run: |
+          docker compose exec -T airflow-apiserver \
+          airflow connections add postgres_default \
+          --conn-type postgres \
+          --conn-host postgres \
+          --conn-login airflow \
+          --conn-password airflow \
+          --conn-port 5432 \
+          --conn-schema airflow
+
+      - name: Create SMTP Connection
+        run: |
+          docker compose exec -T airflow-apiserver \
+          airflow connections add smtp_default \
+          --conn-type smtp \
+          --conn-host smtp.gmail.com \
+          --conn-port 587 \
+          --conn-login test@example.com \
+          --conn-password dummy_password \
+          --conn-extra '{"smtp_starttls": true, "smtp_ssl": false}' 
+          
+           
       - name: Run isort check
         run: |
           docker compose exec -T airflow-apiserver isort . --check-only
