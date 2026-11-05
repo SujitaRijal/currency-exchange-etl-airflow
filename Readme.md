@@ -1,5 +1,5 @@
 # Currency Exchange Rate ETL Pipeline using Apache Airflow
-[![CI](https://github.com/SujitaRijal/CurrencyETLPipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/SujitaRijal/CurrencyETLPipeline/actions/workflows/ci.yml)
+[![CI](https://github.com/SujitaRijal/currency-exchange-etl-airflow/actions/workflows/ci.yml/badge.svg)](https://github.com/SujitaRijal/CurrencyETLPipeline/actions/workflows/ci.yml)
 
 
 A production-style ETL pipeline built using **Apache Airflow 3, Python, PostgreSQL, Docker, and REST API integration** to automate the extraction, validation, transformation, and loading of daily currency exchange rate data.
