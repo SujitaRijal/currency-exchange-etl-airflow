@@ -1,4 +1,6 @@
 # Currency Exchange Rate ETL Pipeline using Apache Airflow
+[![CI](https://github.com/SujitaRijal/CurrencyETLPipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/SujitaRijal/CurrencyETLPipeline/actions/workflows/ci.yml)
+
 
 A production-style ETL pipeline built using **Apache Airflow 3, Python, PostgreSQL, Docker, and REST API integration** to automate the extraction, validation, transformation, and loading of daily currency exchange rate data.
 
@@ -216,11 +218,15 @@ The Airflow DAG consists of the following stages:
 CurrencyETLPipeline/
 
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # GitHub Actions CI workflow
+
+│
 ├── dags/
 │   └── currency_pipeline.py
 
 ├── include/
-│   │
 │   ├── callbacks/
 │   │   ├── audit_callback.py
 │   │   ├── email_callback.py
@@ -254,19 +260,19 @@ CurrencyETLPipeline/
 │       ├── metrics.py
 │       └── report_generator.py
 
-
+│
 ├── tests/
 │   ├── unit/
 │   └── integration/
 
-
+│
 ├── output/
 │   ├── raw/
 │   ├── processed/
 │   ├── audit/
 │   └── reports/
 
-
+│
 ├── logs/
 
 ├── plugins/
@@ -280,11 +286,10 @@ CurrencyETLPipeline/
 ├── requirements.txt
 ├── requirements-dev.txt
 
-
-├── pytest.ini              # Pytest configuration
-├── pyproject.toml          # Project metadata + tool configurations
-├── .flake8                 # Flake8 linting rules
-├── .isort.cfg              # Import sorting configuration
+├── pytest.ini
+├── pyproject.toml
+├── .flake8
+├── .isort.cfg
 ├── .gitignore
 
 └── README.md
