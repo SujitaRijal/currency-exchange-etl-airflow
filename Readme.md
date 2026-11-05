@@ -1,156 +1,226 @@
 # Currency Exchange Rate ETL Pipeline using Apache Airflow
 
-A production-inspired ETL pipeline built with **Apache Airflow 3**, **Python**, **PostgreSQL**, and **Docker** that automates the extraction, validation, transformation, and loading of daily currency exchange rates.
+A production-style ETL pipeline built using **Apache Airflow 3, Python, PostgreSQL, Docker, and REST API integration** to automate the extraction, validation, transformation, and loading of daily currency exchange rate data.
 
-The pipeline supports **incremental loading**, **execution auditing**, **automatic email notifications**, and **idempotent database loading**, making it a practical demonstration of production-oriented data engineering concepts.
+The project demonstrates production-oriented data engineering practices including **incremental data processing, idempotent database loading, execution auditing, failure handling, automated notifications, testing, and CI automation using GitHub Actions.**
 
-## Project Overview
+---
 
-This project is an end-to-end ETL (Extract, Transform, Load) pipeline built using **Apache Airflow 3**, **Python**, **PostgreSQL**, and **Docker**. It automatically retrieves daily currency exchange rates from the **Open Exchange Rates API (`open.er-api.com`)**, validates the API response, transforms the nested JSON data into a structured relational format, performs data quality checks, and loads the processed data into PostgreSQL.
+# Project Overview
 
-The pipeline follows a modular architecture by separating the Extract, Validate, Transform, Quality Check, Load, Metadata, Audit, Callback, and Utility components into independent modules, making the workflow easier to maintain and extend. It incorporates production-oriented ETL practices such as **incremental loading** using an ETL metadata table and Airflow's `@task.short_circuit`, **idempotent database loading** using PostgreSQL unique constraints with `ON CONFLICT DO NOTHING`, **execution audit logging** that tracks pipeline status (`RUNNING`, `SUCCESS`, `SKIPPED`, and `FAILED`), **automatic SMTP email notifications** on task failures, and **structured logging** for monitoring and debugging.
+This project implements an end-to-end ETL workflow that extracts currency exchange rates from the **Exchange Rate API (`open.er-api.com`)**, validates and transforms the API response, performs data quality checks, and loads processed exchange rate records into PostgreSQL.
 
-This project was developed to gain practical experience with workflow orchestration, REST API integration, PostgreSQL, Docker, and production-style data engineering concepts.
+The pipeline is orchestrated using **Apache Airflow TaskFlow API** and follows a modular architecture by separating extraction, validation, transformation, quality checks, loading, metadata management, auditing, callbacks, and utility components.
 
+The project focuses on real-world data engineering practices:
 
-## Features
+- Incremental loading using metadata tracking
+- Idempotent database operations
+- Pipeline execution auditing
+- Failure callbacks and email notifications
+- Automated file retention
+- Docker-based environment setup
+- Automated testing and CI validation
 
-* **Automated ETL Pipeline** – Extracts, validates, transforms, and loads daily currency exchange rates from the Open Exchange Rates API.
-* **Incremental Loading** – Processes only new API data using an ETL metadata table and Airflow's `@task.short_circuit`.
-* **Data Validation & Quality Checks** – Validates API responses, cleans invalid records, and enforces data quality rules before loading.
-* **Idempotent Loading** – Prevents duplicate records using PostgreSQL unique constraints together with `ON CONFLICT DO NOTHING`.
-* **Execution Auditing** – Tracks every pipeline run with audit logs, recording execution status (`RUNNING`, `SUCCESS`, `SKIPPED`, `FAILED`), timestamps, loaded records, and error messages.
-* **Failure Handling & Notifications** – Uses Airflow callbacks to update audit logs and automatically send SMTP email notifications when tasks fail.
-* **File Management** – Stores raw and processed JSON files for traceability and automatically purges old files based on configurable retention settings.
-* **Monitoring & Logging** – Implements structured logging throughout the pipeline for monitoring, debugging, and troubleshooting.
-* **Modular Architecture** – Organizes the project into independent Extract, Validate, Transform, Quality Check, Load, Metadata, Audit, Callback, and Utility modules for maintainability and scalability.
-* **Containerized Deployment** – Runs in a reproducible environment using Docker and Docker Compose.
+---
 
+# Features
 
-## ETL Pipeline Architecture
+## Automated ETL Pipeline
+
+- Extracts daily exchange rate data from an external REST API.
+- Stores raw API responses for traceability.
+- Processes data through validation, transformation, and loading stages.
+
+## Incremental Loading
+
+- Tracks previously processed API timestamps using an ETL metadata table.
+- Skips unnecessary processing when no new data is available.
+- Uses Airflow `@task.short_circuit` for conditional execution.
+
+## Data Validation & Quality Checks
+
+- Validates API response structure and required fields.
+- Removes invalid exchange rate records.
+- Performs quality checks before loading data into PostgreSQL.
+
+## Idempotent Database Loading
+
+- Prevents duplicate records using PostgreSQL unique constraints.
+- Uses `ON CONFLICT DO NOTHING` during insertion.
+
+## Execution Auditing
+
+Tracks pipeline execution details including:
+
+- Pipeline status:
+  - RUNNING
+  - SUCCESS
+  - SKIPPED
+  - FAILED
+- Execution timestamps
+- Loaded records
+- Error messages
+
+## Failure Handling & Notifications
+
+- Uses Airflow callbacks for failure management.
+- Updates audit records automatically.
+- Sends email notifications through SMTP configuration.
+
+## File Management
+
+- Stores raw and processed JSON files.
+- Automatically removes expired files based on retention settings.
+
+## Testing & Code Quality
+
+Implemented:
+
+- Unit Testing
+- Integration Testing
+
+Code quality checks:
+
+- Black
+- isort
+- Flake8
+
+## CI Automation
+
+GitHub Actions automatically:
+
+- Builds Docker environment
+- Initializes Airflow
+- Creates Airflow Variables and Connections
+- Initializes database schema
+- Runs code quality checks
+- Executes Pytest with coverage
+
+---
+
+# ETL Pipeline Architecture
 
 ```text
-                         Currency Exchange Rate ETL Pipeline
-
-                      Open Exchange Rates API (open.er-api.com)
-                                      │
-                                      ▼
-                            Extract Exchange Rates
-                                      │
-                                      ▼
-                         Save Raw JSON (output/raw)
-                                      │
-                                      ▼
-                           Create Audit Log (RUNNING)
-                                      │
-                                      ▼
-                    Check Metadata (Incremental Loading)
-                                      │
-                    ┌─────────────────┴─────────────────┐
-                    │                                   │
-                 New Data                        No New Data
-                    │                                   │
-                    ▼                                   ▼
-                Validate                     Update Audit (SKIPPED)
-                    │                                   │
-                    ▼                                   ▼
-               Transform                        Pipeline Ends
-                    │
-                    ▼
-        Save Processed JSON (output/processed)
-                    │
-                    ▼
-           Data Quality Checks
-                    │
-                    ▼
-          Load into PostgreSQL
-                    │
-                    ▼
-         Update Metadata Table
-                    │
-                    ▼
-        Update Audit log (SUCCESS)
-                    │
-                    ▼
-      Purge Old Raw & Processed Files
-                    │
-                    ▼
-                   End
+                 Exchange Rate API
+                       |
+                       ▼
+              Extract Exchange Rates
+                       |
+                       ▼
+              Store Raw JSON Data
+                       |
+                       ▼
+             Create Audit (RUNNING)
+                       |
+                       ▼
+          Metadata Check (Incremental Load)
+                       |
+              ┌────────┴────────┐
+              ▼                 ▼
+          New Data          No New Data
+              |                 |
+              ▼                 ▼
+        Validate Data      Update Audit
+              |
+              ▼
+        Transform Data
+              |
+              ▼
+       Data Quality Check
+              |
+              ▼
+      Load into PostgreSQL
+              |
+              ▼
+       Update Metadata
+              |
+              ▼
+       Update Audit Log
+              |
+              ▼
+       Remove Old Files
 
 
-              Any Task Failure
-                      │
-                      ▼
-          Pipeline Failure Callback
-               │               │
-               ▼               ▼
- Update Audit Record      Send Email
-      (FAILED)          Notification
-        
+Failure Flow:
+
+Task Failure
+      |
+      ▼
+Airflow Callback
+      |
+ ┌────┴────┐
+ ▼         ▼
+Audit    Email
+FAILED Notification
 ```
 
+---
 
-## Workflow
+# Workflow
 
-The pipeline is orchestrated using Apache Airflow's TaskFlow API and consists of the following stages:
+The Airflow DAG consists of the following stages:
 
-### 1. Extract
+## 1. Extract
 
-* Fetches the latest exchange rates from the Open Exchange Rates API.
-* Saves the complete API response as a raw JSON file.
-* Passes the raw file path to downstream tasks through Airflow.
+- Retrieves the latest exchange rates from the API.
+- Saves the raw API response as JSON.
 
-### 2. Metadata check
+## 2. Metadata Check
 
-* Creates the metadata table automatically if it does not exist.
-* Reads the API update timestamp.
-* Retrieves the last successfully processed timestamp from PostgreSQL.
-* Compares both timestamps.
-* Skips downstream tasks when no new source data is available.
- 
-### 3. Validate
+- Compares API timestamp with the last processed timestamp.
+- Skips downstream tasks if no new data exists.
 
-* Verifies that all required fields are present (`base_code`, `time_last_update_utc`, and `rates`) with their expected data types.
-* Stops the pipeline immediately if the dataset fails validation.
+## 3. Validate
 
-### 4. Transform
+- Checks required fields and API response structure.
+- Stops execution if validation fails.
 
-* Reads the validated raw JSON file.
-* Performs record-level validation 
-* Saves the cleaned data as a processed JSON file.
+## 4. Transform
 
-### 5. Data Quality Check
+- Converts nested API JSON into structured records.
+- Removes invalid records.
+- Generates processed JSON output.
 
-- Verifies predefined quality rules before loading.
-- Stops the pipeline if any quality check fails.
+## 5. Data Quality Check
 
-### 6. Load
-* Performs bulk insertion into PostgreSQL using `executemany()`.
-* Prevents duplicate records using a unique constraint together with `ON CONFLICT DO NOTHING`.
+- Validates processed data before loading.
 
-### 7. Update Metadata
-* Reads the API update timestamp from the raw JSON.
-* Updates the etl_metadata table after successful loading.
-* Stores the latest processed timestamp for future incremental loads.
+## 6. Load
 
-### 8. Update Audit log
-* Records pipeline execution details, including status (RUNNING, SUCCESS, SKIPPED, or FAILED), timestamps, loaded records, and error messages.
+- Performs bulk insertion into PostgreSQL.
+- Prevents duplicate records.
 
-### 9. Failure Handling
-* Executes Airflow callbacks to update the audit log and send automatic email notifications whenever a task fails.
+## 7. Metadata Update
 
-### 10. Automatic File Retention
-* Automatically removes old files from output/raw & output/processed using Airflow Variable & Airflow Execution Date(ds) based on configured retention period
+- Stores the latest successfully processed timestamp.
 
-## Project Structure
+## 8. Audit Logging
+
+- Records pipeline execution details and status.
+
+## 9. Failure Handling
+
+- Executes callbacks on task failure.
+- Sends notification emails.
+
+## 10. File Retention
+
+- Removes old raw and processed files based on configured retention period.
+
+---
+
+# Project Structure
 
 ```text
 CurrencyETLPipeline/
+
 │
 ├── dags/
-│   └── currency_pipeline.py          # Main Airflow DAG
-│
+│   └── currency_pipeline.py
+
 ├── include/
+│   │
 │   ├── callbacks/
 │   │   ├── audit_callback.py
 │   │   ├── email_callback.py
@@ -169,120 +239,258 @@ CurrencyETLPipeline/
 │   │   └── quality_check.py
 │   │
 │   ├── load/
+│   │   ├── audit.py
 │   │   ├── database.py
 │   │   ├── loader.py
 │   │   ├── metadata.py
-│   │   └── audit.py
+│   │   └── schema.py
 │   │
-│   └── utils/
-│       ├── file_utils.py
-│       └── purge_utils.py
-│
+│   ├── utils/
+│   │   ├── file_utils.py
+│   │   └── purge_utils.py
+│   │
+│   └── reports/
+│       ├── audit_export.py
+│       ├── metrics.py
+│       └── report_generator.py
+
+
+├── tests/
+│   ├── unit/
+│   └── integration/
+
+
 ├── output/
 │   ├── raw/
-│   └── processed/
-│
+│   ├── processed/
+│   ├── audit/
+│   └── reports/
+
+
 ├── logs/
+
 ├── plugins/
+
 ├── config/
-│
+
+
 ├── docker-compose.yaml
 ├── Dockerfile
+
 ├── requirements.txt
+├── requirements-dev.txt
+
+
+├── pytest.ini              # Pytest configuration
+├── pyproject.toml          # Project metadata + tool configurations
+├── .flake8                 # Flake8 linting rules
+├── .isort.cfg              # Import sorting configuration
+├── .gitignore
+
 └── README.md
+
 ```
+---
 
 # Screenshots
-### Airflow DAG Graph – ETL Pipeline Execution
-![Airflow Graph View](image-7.png)
 
-### Airflow Grid View – Incremental Loading (Downstream Tasks Skipped) 
-![Incremental loading demonstration](image-8.png)
+## Airflow DAG Graph View
 
-
-## Technologies Used
-- Apache Airflow 3.x
-- Python 3.12
-- PostgreSQL
-- Docker & Docker Compose
-- REST API (Open Exchange Rates API)
-- JSON
-- SMTP (Email Notifications)
+![Airflow DAG Graph](graphview.png)
 
 
-## Database Tables
-The pipeline uses the following PostgreSQL tables to store exchange rate data, incremental loading metadata, and pipeline execution audit logs.
+## Incremental Loading Demonstration
 
-```sql
-CREATE TABLE IF NOT EXISTS exchange_rates(
-    id SERIAL PRIMARY KEY,
-    load_date DATE,
-    source_timestamp TEXT,
-    base_currency VARCHAR(10),
-    target_currency VARCHAR(10),
-    exchange_rate NUMERIC(20,8),
-    UNIQUE(load_date,base_currency,target_currency)
-    );
+![Incremental Loading](incrementalloading.png)
+
+---
+
+# Technologies Used
+
+| Category | Technology |
+|---|---|
+| Programming Language | Python 3.12 |
+| Workflow Orchestration | Apache Airflow 3 |
+| Database | PostgreSQL |
+| Containerization | Docker & Docker Compose |
+| API Integration | REST API |
+| Testing | Pytest |
+| Code Quality | Black, isort, Flake8 |
+| CI/CD | GitHub Actions |
+
+---
+
+# Database Design
+
+The pipeline uses PostgreSQL tables for storing exchange rate data, metadata tracking, and execution auditing.
+
+## exchange_rates
+
+Stores processed currency exchange rate records.
+
+```text
+id
+load_date
+source_timestamp
+base_currency
+target_currency
+exchange_rate
 ```
 
-```sql
-CREATE TABLE IF NOT EXISTS etl_metadata(
-    pipeline_name VARCHAR(100) PRIMARY KEY,
-    last_processed_timestamp TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
+## etl_metadata
+
+Stores the latest processed timestamp used for incremental loading.
+
+```text
+pipeline_name
+last_processed_timestamp
+updated_at
 ```
 
-```sql
-CREATE TABLE IF NOT EXISTS etl_audit_log (
-    id SERIAL PRIMARY KEY,
-    pipeline_name VARCHAR(100) NOT NULL,
-    run_id TEXT NOT NULL,
-    execution_date DATE NOT NULL,
-    start_time TIMESTAMP NOT NULL,
-    end_time TIMESTAMP ,
-    status VARCHAR(20) NOT NULL,
-    records_loaded INTEGER DEFAULT 0,
-    error_message TEXT
-)
+## etl_audit_log
+
+Tracks pipeline execution history.
+
+```text
+pipeline_name
+run_id
+execution_date
+start_time
+end_time
+status
+records_loaded
+error_message
 ```
 
-## Database Tables Description
+---
 
-| Table  |  Purpose                                                                     |
-|--------|------------------------------------------------------------------------------|
-| `exchange_rates` | Stores the processed currency exchange rates loaded from the API. |
-| `etl_metadata`   | Stores the latest successfully processed API timestamp used for incremental loading. |
-| `etl_audit_log`  | Records every pipeline execution, including execution status, timestamps, loaded records, and failure messages. |
+# CI/CD Pipeline
 
+The project uses GitHub Actions for automated validation.
 
-## How to Run
-1. Clone the repository.
-2. Start the services:
+```text
+Push / Pull Request
+
+        |
+        ▼
+
+GitHub Actions
+
+        |
+        ▼
+
+Docker Build
+
+        |
+        ▼
+
+Airflow Initialization
+
+        |
+        ▼
+
+Create Variables & Connections
+
+        |
+        ▼
+
+Database Schema Setup
+
+        |
+        ▼
+
+isort Check
+
+        |
+        ▼
+
+Black Check
+
+        |
+        ▼
+
+Flake8
+
+        |
+        ▼
+
+Pytest + Coverage
+```
+
+---
+
+# Testing
+
+The project includes:
+
+### Unit Tests
+
+Tests individual components including:
+
+- Extract modules
+- Validation logic
+- Transformation logic
+- Loading functions
+- Utility functions
+
+### Integration Tests
+
+Tests:
+
+- PostgreSQL database interaction
+- Data loading workflow
+- Duplicate handling
+
+---
+
+# Running the Project
+
+## Clone Repository
+
+```bash
+git clone <repository-url>
+```
+
+## Start Services
 
 ```bash
 docker compose up -d
 ```
 
-3. Open Airflow:
+## Access Airflow
 
 ```
 http://localhost:8080
 ```
 
-4. Enable the `CurrencyETLPipeline` DAG.
+## Run Pipeline
 
-5. Trigger the DAG manually or wait for the scheduled run.
+Enable and trigger:
 
-6. Verify the loaded data in PostgreSQL.
+```
+CurrencyETLPipeline
+```
 
-## Future Improvements
+---
 
-- Add automated unit and integration tests.
-- Store historical pipeline metrics for monitoring.
-- Visualize ETL metrics using Grafana or Apache Superset.
-- Deploy the pipeline to a cloud environment (AWS, Azure, or GCP).
-- Integrate CI/CD for automated testing and deployment.
+# Future Improvements
 
+- Deploy pipeline on cloud infrastructure (AWS/GCP/Azure)
+- Add monitoring dashboards using Grafana or Apache Superset
+- Integrate secrets management tools
+- Improve deployment automation
+- Add workflow performance monitoring
 
+---
 
+# Author
+
+**Sujita Rijal**
+
+BSc. CSIT Graduate
+
+Interested in:
+- Data Engineering
+- ETL Development
+- Workflow Automation
+- Software Engineering
