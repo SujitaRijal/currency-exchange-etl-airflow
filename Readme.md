@@ -445,6 +445,11 @@ Tests:
 - PostgreSQL database interaction
 - Data loading workflow
 - Duplicate handling
+- Database schema initialization
+
+## Test Automation
+
+All tests are executed automatically through GitHub Actions using Pytest.
 
 ---
 
