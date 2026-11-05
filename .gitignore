@@ -33,10 +33,14 @@ standalone_admin_password.txt
 # -----------------------------
 output/raw/*
 output/processed/*
+output/audit/*
+output/reports/*
 
 # Keep the folders
 !output/raw/.gitkeep
 !output/processed/.gitkeep
+!output/audit/.gitkeep
+!output/reports/.gitkeep
 
 # -----------------------------
 # Environment Variables
